@@ -1,0 +1,5 @@
+# Checkpoints are temporary training files - do not commit them
+saved_model/checkpoints/
+*.tmp
+*.tmp.keras
+__pycache__/
