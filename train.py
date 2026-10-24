@@ -1,16 +1,19 @@
 """
 train.py - the training function used by BOTH the Streamlit button and the command line.
 
-    Streamlit:  import train as trainer; trainer.train_model(...)
-    Terminal:   python train.py --epochs 40 --batch-size 128 [--force]
+Streamlit: import train as trainer; trainer.train_model(...)
+Terminal:  python train.py --epochs 40 --batch-size 128 [--force]
 
 The model is saved to core.MODEL_PATH (saved_model/cifar100_cnn.keras) - the very same
 path the prediction page loads. Nothing is reported as successful unless the file was
 written, reloaded from disk and evaluated on the official CIFAR-100 test set.
 
+Data: CIFAR-100 is loaded through cifar_core.load_cifar100(), which downloads with
+timeouts, shows live progress, falls back to a second source and caches the result.
+
 Memory note: images stay uint8 and are scaled to [0,1] batch by batch inside a tf.data
 pipeline, which needs far less RAM than converting all 45,000 images to float32 up front
-(important on Streamlit Community Cloud, which has roughly 1 GB RAM).
+(important on Streamlit Community Cloud, which has limited RAM).
 """
 from __future__ import annotations
 
@@ -35,15 +38,28 @@ def model_is_ready() -> bool:
     return core.METRICS_PATH.exists() and core.load_trained_model() is not None
 
 
+def _console_progress():
+    """Progress printer for the terminal: prints a line at most every 5 seconds."""
+    last = {"t": 0.0, "msg": ""}
+
+    def cb(message, fraction=None):
+        now = time.time()
+        if message != last["msg"] and (now - last["t"] >= 5 or fraction in (0.0, 1.0)):
+            last["t"], last["msg"] = now, message
+            print("   " + message, flush=True)
+    return cb
+
+
 def train_model(epochs: int = 15, batch_size: int = 64, callbacks=None,
-                on_status=None, verbose: int = 0) -> dict:
+                on_status=None, verbose: int = 0, on_progress=None) -> dict:
     """Train the CNN from scratch, save it, verify it, evaluate it, return real metrics.
 
-    on_status(msg)  - optional function that receives progress messages (the app passes one).
-    callbacks       - optional extra Keras callbacks (the app passes a live-progress one).
+    on_status(msg)               - optional: receives one message per big step.
+    on_progress(msg, fraction)   - optional: receives live DOWNLOAD progress (fraction 0..1 or None).
+    callbacks                    - optional extra Keras callbacks (the app passes a live-progress one).
+
     Raises TrainingError (clear message) or lets unexpected exceptions propagate.
     """
-
     def say(msg: str) -> None:
         if on_status is not None:
             on_status(msg)
@@ -53,6 +69,17 @@ def train_model(epochs: int = 15, batch_size: int = 64, callbacks=None,
     if epochs < 1 or batch_size < 1:
         raise TrainingError("Epochs and batch size must both be at least 1.")
 
+    # ---- 1. data FIRST - it needs no TensorFlow, so a download problem is reported at once ----
+    t_start = time.time()
+    say("Step 1/5 – Loading CIFAR-100 (instant if cached, otherwise a one-time download of about 160 MB)…")
+    try:
+        x_all, y_all, x_test, y_test = core.load_cifar100(on_progress=on_progress)
+    except core.DatasetError as e:
+        raise TrainingError(str(e)) from e
+    except Exception as e:
+        raise TrainingError(f"Unexpected problem while loading CIFAR-100 ({type(e).__name__}: {e}).") from e
+    say(f"CIFAR-100 ready: {len(y_all):,} training images, {len(y_test):,} test images.")
+
     try:
         import tensorflow as tf
         from sklearn.model_selection import train_test_split
@@ -60,19 +87,9 @@ def train_model(epochs: int = 15, batch_size: int = 64, callbacks=None,
     except ImportError as e:
         raise TrainingError(
             f"A required package is not installed ({e}). Make sure requirements.txt lists "
-            "tensorflow-cpu, scikit-learn, numpy, pandas, matplotlib, pillow and streamlit.") from e
+            "tensorflow-cpu, scikit-learn, numpy, pandas, pyarrow, matplotlib, pillow and streamlit.") from e
 
-    t_start = time.time()
     keras.utils.set_random_seed(core.SEED)
-
-    # ---- 1. data ---------------------------------------------------------------------
-    say("Step 1/5 – Loading CIFAR-100 (the first run downloads about 160 MB)…")
-    try:
-        x_all, y_all, x_test, y_test = core.load_cifar100()
-    except Exception as e:
-        raise TrainingError(
-            f"Could not load or download CIFAR-100 ({type(e).__name__}: {e}). "
-            "The server needs internet access for the first download.") from e
 
     say("Step 2/5 – Splitting 45,000 training / 5,000 validation images…")
     idx_tr, idx_val = train_test_split(
@@ -127,11 +144,10 @@ def train_model(epochs: int = 15, batch_size: int = 64, callbacks=None,
     core.MODEL_DIR.mkdir(parents=True, exist_ok=True)
     tmp_path = core.MODEL_DIR / "cifar100_cnn.tmp.keras"
     model.save(tmp_path)
-    os.replace(tmp_path, core.MODEL_PATH)          # atomic: never leaves a half-written model
-    core.METRICS_PATH.unlink(missing_ok=True)      # old metrics would not match the new model
+    os.replace(tmp_path, core.MODEL_PATH)        # atomic: never leaves a half-written model
+    core.METRICS_PATH.unlink(missing_ok=True)    # old metrics would not match the new model
     with open(core.HISTORY_PATH, "w", encoding="utf-8") as f:
         json.dump(hist, f, indent=2)
-
     del train_ds, val_ds, model
     gc.collect()
 
@@ -178,7 +194,8 @@ def main() -> None:
               "training (use --force to retrain).")
         return
     try:
-        metrics = train_model(epochs=args.epochs, batch_size=args.batch_size, verbose=2)
+        metrics = train_model(epochs=args.epochs, batch_size=args.batch_size, verbose=2,
+                              on_progress=_console_progress())
     except TrainingError as e:
         raise SystemExit(f"Training failed: {e}")
     print(f"\nTest accuracy : {metrics['test_accuracy'] * 100:.2f}%")

@@ -1,21 +1,23 @@
 """
 CIFAR-100 Image Recognition - Streamlit app.
-Run with:  streamlit run app.py
 
-Fix notes (blank "Train Model" tab)
-------------------------------------
+Run with: streamlit run app.py
+
+Design notes
+------------
 st.tabs() does NOT lazy-load: every tab's code runs top-to-bottom on every rerun, and the
-page is streamed to the browser in the order the code creates elements. In the previous
-version the Dataset tab (which downloaded/loaded ~180 MB of images) ran BEFORE the Train
-tab, so a slow load, a memory kill or any uncaught exception there stopped the script
-before the Train tab's first line was reached -> an empty tab.
+page is streamed to the browser in the order the code creates elements. So:
 
-Now:
-  * the Train tab is rendered FIRST (the tab order the user sees is unchanged),
-  * every tab is wrapped so an error in one tab is shown inside that tab only,
-  * the Dataset tab loads images only when its button is pressed,
-  * the Start Training button calls train.train_model() and the model status refreshes
-    after a verified, successful run.
+* the Train tab is rendered FIRST (the tab order the user sees is unchanged),
+* every tab is wrapped so an error in one tab is shown inside that tab only,
+* the Dataset tab loads images only when its button is pressed,
+* the Start Training button calls train.train_model() and the model status refreshes
+  after a verified, successful run.
+
+Download fix: the dataset is now fetched by cifar_core.load_cifar100(), which has timeouts,
+a fallback source, a local cache and live progress. The Train tab and the Dataset tab show
+that progress as a real progress bar, so a slow download is visible and a stuck one fails
+with a clear message instead of hanging silently.
 """
 from __future__ import annotations
 
@@ -45,25 +47,25 @@ TEXT = "#8b8fa3"
 
 st.markdown(
     f"""
-<style>
-.hero {{background: linear-gradient(135deg, {ACCENT} 0%, #3ec6e0 100%); color: white;
-        padding: 1.6rem 2rem; border-radius: 18px; margin-bottom: 1.2rem;}}
-.hero h1 {{margin: 0; font-size: 2.1rem; color: white;}}
-.hero p {{margin: .4rem 0 0 0; opacity: .95; font-size: 1.02rem;}}
-.result-card {{border: 1px solid rgba(108,99,255,.45); background: rgba(108,99,255,.10);
-               border-radius: 16px; padding: 1.1rem 1.4rem; margin-bottom: .8rem;}}
-.result-card .label {{font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; opacity: .7;}}
-.result-card .name {{font-size: 2.1rem; font-weight: 700; line-height: 1.2;}}
-.result-card .prob {{font-size: 1.1rem; opacity: .9;}}
-div[data-testid="stFileUploaderDropzone"] {{border: 2px dashed {ACCENT}; border-radius: 16px;
-        background: rgba(108,99,255,.06);}}
-</style>
-<div class="hero">
-  <h1>🧠 CIFAR-100 Image Recognizer</h1>
-  <p>A convolutional neural network trained on CIFAR-100 &mdash; upload a picture and see
-     which of the <b>100 known categories</b> it resembles most.</p>
-</div>
-""",
+    <style>
+    .hero {{background: linear-gradient(135deg, {ACCENT} 0%, #3ec6e0 100%); color: white;
+            padding: 1.6rem 2rem; border-radius: 18px; margin-bottom: 1.2rem;}}
+    .hero h1 {{margin: 0; font-size: 2.1rem; color: white;}}
+    .hero p {{margin: .4rem 0 0 0; opacity: .95; font-size: 1.02rem;}}
+    .result-card {{border: 1px solid rgba(108,99,255,.45); background: rgba(108,99,255,.10);
+                   border-radius: 16px; padding: 1.1rem 1.4rem; margin-bottom: .8rem;}}
+    .result-card .label {{font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; opacity: .7;}}
+    .result-card .name {{font-size: 2.1rem; font-weight: 700; line-height: 1.2;}}
+    .result-card .prob {{font-size: 1.1rem; opacity: .9;}}
+    div[data-testid="stFileUploaderDropzone"] {{border: 2px dashed {ACCENT}; border-radius: 16px;
+                                                background: rgba(108,99,255,.06);}}
+    </style>
+    <div class="hero">
+      <h1>🧠 CIFAR-100 Image Recognizer</h1>
+      <p>A convolutional neural network trained on CIFAR-100 &mdash; upload a picture and see
+      which of the <b>100 known categories</b> it resembles most.</p>
+    </div>
+    """,
     unsafe_allow_html=True,
 )
 
@@ -80,6 +82,7 @@ def get_model():
 @st.cache_resource(show_spinner=False)
 def get_data():
     # cache_resource (not cache_data) so the 150 MB arrays are not copied on every rerun.
+    # Reads the validated local cache (data_cache/); downloads only if it is missing.
     return core.load_cifar100()
 
 
@@ -88,6 +91,18 @@ def release_data():
     get_data.clear()
     st.session_state.dataset_loaded = False
     gc.collect()
+
+
+def make_download_progress(bar):
+    """Return a callback that draws download progress on a Streamlit progress bar."""
+    state = {"fraction": 0.0}
+
+    def _cb(message, fraction=None):
+        if fraction is not None:
+            state["fraction"] = min(max(float(fraction), 0.0), 1.0)
+        bar.progress(state["fraction"], text=message)
+
+    return _cb
 
 
 # --------------------------------------------------------------------------- #
@@ -183,7 +198,6 @@ def tab_identify(model):
             key=f"uploader_{st.session_state.uploader_key}",
             help=f"JPG, JPEG, PNG or WEBP – up to {core.MAX_UPLOAD_MB} MB.",
         )
-
         file_id, img, small, batch = None, None, None, None
         if uploaded is not None:
             data = uploaded.getvalue()
@@ -202,14 +216,12 @@ def tab_identify(model):
             with st.expander("What the model actually sees (32×32 pixels)"):
                 st.image(small.resize((192, 192), Image.Resampling.NEAREST),
                          caption="Center-cropped, resized to 32×32 RGB")
-
             b1, b2 = st.columns(2)
             go = b1.button("🔍 Identify Image", type="primary")
             if b2.button("🗑️ Clear / upload another"):
                 st.session_state.uploader_key += 1
                 st.session_state.pop("result", None)
                 st.rerun()
-
             if go:
                 try:
                     with st.spinner("Analysing…"):
@@ -229,7 +241,6 @@ def tab_identify(model):
             st.markdown("#### Result")
             st.caption("Upload an image and press **Identify Image** – the prediction will appear here.")
             return
-
         probs = result["probs"]
         top = core.top_k(probs, 5)
         _, best_name, best_p = top[0]
@@ -240,14 +251,12 @@ def tab_identify(model):
             unsafe_allow_html=True,
         )
         st.progress(float(best_p))
-
         if best_p < 0.40:
             st.warning("Low confidence. The picture may show something outside the 100 CIFAR-100 classes, "
                        "or be too ambiguous at 32×32 resolution.")
         else:
             st.caption("A high probability only means the model prefers this class over the other 99 – "
                        "it does not prove the object belongs to the CIFAR-100 list.")
-
         show_fig(plot_top5(top))
         st.dataframe(
             pd.DataFrame({"Rank": range(1, 6),
@@ -261,7 +270,6 @@ def tab_identify(model):
 # --------------------------------------------------------------------------- #
 def make_progress_callback(total_epochs, bar, status, loss_ph, acc_ph):
     import time
-
     from tensorflow import keras
 
     class _Live(keras.callbacks.Callback):
@@ -299,10 +307,10 @@ def make_progress_callback(total_epochs, bar, status, loss_ph, acc_ph):
 def run_training(epochs, batch_size):
     """Called when Start Training is pressed. Success is only reported if train.train_model()
     returns real, verified metrics; every failure is shown as an error."""
-    release_data()  # free ~180 MB before training loads its own copy
+    release_data()  # free memory before training loads its own copy
 
     log = st.status("Training started – keep this page open until it finishes", expanded=True)
-    bar = st.progress(0.0, text="Preparing…")
+    bar = st.progress(0.0, text="Preparing…")   # first shows the DOWNLOAD, then the epochs
     epoch_info = st.empty()
     c_loss, c_acc = st.columns(2)
     c_loss.caption("Loss (train vs validation)")
@@ -312,7 +320,8 @@ def run_training(epochs, batch_size):
     try:
         cb = make_progress_callback(epochs, bar, epoch_info, loss_ph, acc_ph)
         metrics = trainer.train_model(epochs=epochs, batch_size=batch_size,
-                                      callbacks=[cb], on_status=log.write)
+                                      callbacks=[cb], on_status=log.write,
+                                      on_progress=make_download_progress(bar))
     except trainer.TrainingError as e:
         log.update(label="Training failed", state="error")
         st.error(f"❌ Training failed: {e}")
@@ -339,22 +348,42 @@ def run_training(epochs, batch_size):
     st.rerun()  # re-run the whole page so the sidebar, Identify and Performance tabs see the new model
 
 
+def download_dataset_only():
+    """'Download CIFAR-100 first' button: lets you see the download work BEFORE training."""
+    bar = st.progress(0.0, text="Preparing download…")
+    try:
+        core.ensure_dataset(make_download_progress(bar))
+    except core.DatasetError as e:
+        bar.empty()
+        st.error(f"❌ Download failed:\n\n{e}")
+        return
+    except Exception as e:
+        bar.empty()
+        st.error(f"❌ Unexpected download problem: {type(e).__name__}: {e}")
+        with st.expander("Technical details"):
+            st.code(traceback.format_exc())
+        return
+    st.session_state.flash = "✅ CIFAR-100 is downloaded, checked (50,000 train / 10,000 test) and cached."
+    st.rerun()
+
+
 def tab_train(model):
     # Everything up to the button is plain, unconditional rendering - it cannot be skipped.
     st.subheader("🏋️ Train the CNN")
     st.markdown(
         "1. Choose the settings below and press **Start Training**.\n"
-        "2. The app downloads CIFAR-100 (first time only), trains the network, saves it, reloads it from disk "
-        "and evaluates it on the official test images.\n"
+        "2. The app loads CIFAR-100 (a one-time download with a visible progress bar), trains the network, "
+        "saves it, reloads it from disk and evaluates it on the official test images.\n"
         "3. When it succeeds the page refreshes automatically and the sidebar shows the trained model.\n\n"
         "⚠️ Keep this browser tab open while training. Moving a slider or clicking another button during "
         "training restarts the page and **stops** the training."
     )
-    st.caption("Streamlit Community Cloud has about 1 GB RAM, no GPU and a disk that is wiped on every restart or "
+    st.caption("Streamlit Community Cloud has limited RAM, no GPU and a disk that is wiped on every restart or "
                "redeploy. Training here is possible but slow and may run out of memory. Most reliable: run "
                "`python train.py` on your own computer, then upload the `saved_model/` folder to GitHub.")
 
     exists = model is not None
+
     with st.expander("Where the model is saved / loaded (diagnostics)"):
         # Diagnostics are optional: they must never be able to stop the button below from rendering.
         try:
@@ -364,6 +393,8 @@ def tab_train(model):
                      + (f" ({model_file.stat().st_size / 1e6:.1f} MB)" if model_file.exists() else ""))
             st.write(f"Loads correctly: **{exists}**")
             st.write(f"Evaluation file (metrics.json) exists: **{core.METRICS_PATH.exists()}**")
+            st.write(f"CIFAR-100 cached on this server: **{core.dataset_cached()}**"
+                     + (f" ({core.CACHE_NPZ.stat().st_size / 1e6:.0f} MB)" if core.dataset_cached() else ""))
             try:
                 tf_installed = importlib.util.find_spec("tensorflow") is not None
             except (ImportError, ValueError):
@@ -371,6 +402,12 @@ def tab_train(model):
             st.write(f"TensorFlow installed: **{tf_installed}**")
         except Exception as e:
             st.caption(f"(diagnostics unavailable: {e})")
+
+    if not exists:
+        if core.dataset_cached():
+            st.caption("✅ CIFAR-100 is already downloaded and cached on this server.")
+        elif st.button("📥 Download CIFAR-100 first (recommended – shows live progress)"):
+            download_dataset_only()
 
     c1, c2, c3 = st.columns(3)
     epochs = c1.slider("Maximum epochs", 1, 60, 15,
@@ -494,7 +531,7 @@ def tab_dataset():
 
     if not st.session_state.dataset_loaded:
         st.info("To save memory (important on Streamlit Community Cloud) the images are only loaded when you ask. "
-                "The first load downloads about 160 MB.")
+                "The first load downloads about 160 MB (with a progress bar) and is cached afterwards.")
         if st.button("📥 Load dataset and show sample images"):
             st.session_state.dataset_loaded = True
             st.rerun()
@@ -502,12 +539,17 @@ def tab_dataset():
         return
 
     try:
+        if not core.dataset_cached():
+            bar = st.progress(0.0, text="Preparing download…")
+            core.ensure_dataset(make_download_progress(bar))
+            bar.empty()
         with st.spinner("Loading dataset…"):
             x_train, y_train, x_test, y_test = get_data()
     except Exception as e:
         st.session_state.dataset_loaded = False
-        st.error(f"Could not load the dataset: {type(e).__name__}: {e}\n\n"
-                 "The server needs internet access for the first download.")
+        st.error(f"Could not load the dataset: {type(e).__name__}: {e}")
+        if st.button("Try again"):
+            st.rerun()
         return
 
     c = st.columns(5)
@@ -556,7 +598,7 @@ those 100 categories – nothing else.
   test accuracy of *your* trained model is shown in the 📊 Model Performance tab. Top-5 accuracy is much higher than
   top-1 because many classes look alike (maple / oak / willow tree, boy / girl / man / woman…).
 * **Best results** come from clear, centered photos of a single object from the list of 100 classes, on a plain background.
-"""
+        """
     )
     st.markdown("**The 100 classes:** " + ", ".join(core.pretty_name(n) for n in core.CLASS_NAMES) + ".")
 
