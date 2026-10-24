@@ -1,11 +1,29 @@
 """
 CIFAR-100 Image Recognition - Streamlit app.
 Run with:  streamlit run app.py
+
+Fix notes (blank "Train Model" tab)
+------------------------------------
+st.tabs() does NOT lazy-load: every tab's code runs top-to-bottom on every rerun, and the
+page is streamed to the browser in the order the code creates elements. In the previous
+version the Dataset tab (which downloaded/loaded ~180 MB of images) ran BEFORE the Train
+tab, so a slow load, a memory kill or any uncaught exception there stopped the script
+before the Train tab's first line was reached -> an empty tab.
+
+Now:
+  * the Train tab is rendered FIRST (the tab order the user sees is unchanged),
+  * every tab is wrapped so an error in one tab is shown inside that tab only,
+  * the Dataset tab loads images only when its button is pressed,
+  * the Start Training button calls train.train_model() and the model status refreshes
+    after a verified, successful run.
 """
 from __future__ import annotations
 
+import gc
 import hashlib
-import time
+import importlib.util
+import sys
+import traceback
 
 import matplotlib
 
@@ -17,6 +35,7 @@ import streamlit as st
 from PIL import Image
 
 import cifar_core as core
+import train as trainer
 
 st.set_page_config(page_title="CIFAR-100 Image Recognizer", page_icon="🧠", layout="wide")
 
@@ -48,18 +67,27 @@ div[data-testid="stFileUploaderDropzone"] {{border: 2px dashed {ACCENT}; border-
     unsafe_allow_html=True,
 )
 
+
 # --------------------------------------------------------------------------- #
 # Cached resources
 # --------------------------------------------------------------------------- #
 @st.cache_resource(show_spinner="Loading saved model…")
 def get_model():
+    """Loads core.MODEL_PATH - the same file train.train_model() writes."""
     return core.load_trained_model()
 
 
-@st.cache_resource(show_spinner="Loading CIFAR-100 (the first run downloads ~160 MB)…")
+@st.cache_resource(show_spinner=False)
 def get_data():
     # cache_resource (not cache_data) so the 150 MB arrays are not copied on every rerun.
     return core.load_cifar100()
+
+
+def release_data():
+    """Free the dataset from memory (used before training and by a button)."""
+    get_data.clear()
+    st.session_state.dataset_loaded = False
+    gc.collect()
 
 
 # --------------------------------------------------------------------------- #
@@ -123,13 +151,22 @@ def fmt_pct(v):
     return f"{v * 100:.2f}%"
 
 
+def show_class_names():
+    with st.expander("All 100 class names"):
+        names = [core.pretty_name(n) for n in core.CLASS_NAMES]
+        cols = st.columns(4)
+        for i, col in enumerate(cols):
+            col.write("\n".join(f"{j}. {names[j]}" for j in range(i * 25, (i + 1) * 25)))
+
+
 # --------------------------------------------------------------------------- #
 # Tab: Identify
 # --------------------------------------------------------------------------- #
 def tab_identify(model):
     if model is None:
         st.warning("No trained model was found yet. Open the **🏋️ Train Model** tab and train it once "
-                   "(or run `python train.py`). The model is saved to disk and reused afterwards.")
+                   "(or run `python train.py` on your own computer and upload `saved_model/` to GitHub). "
+                   "The model is saved to disk and reused afterwards.")
         return
 
     st.info("**Important:** this model only knows the **100 CIFAR-100 categories** (e.g. apple, bus, "
@@ -163,7 +200,8 @@ def tab_identify(model):
             st.image(img, caption=f"{uploaded.name} • {img.width}×{img.height}px",
                      width=min(img.width, 460))
             with st.expander("What the model actually sees (32×32 pixels)"):
-                st.image(small.resize((192, 192), Image.Resampling.NEAREST), caption="Center-cropped, resized to 32×32 RGB")
+                st.image(small.resize((192, 192), Image.Resampling.NEAREST),
+                         caption="Center-cropped, resized to 32×32 RGB")
 
             b1, b2 = st.columns(2)
             go = b1.button("🔍 Identify Image", type="primary")
@@ -222,12 +260,14 @@ def tab_identify(model):
 # Tab: Train
 # --------------------------------------------------------------------------- #
 def make_progress_callback(total_epochs, bar, status, loss_ph, acc_ph):
+    import time
+
     from tensorflow import keras
 
     class _Live(keras.callbacks.Callback):
         def __init__(self):
             super().__init__()
-            self.rows, self.epoch = [], 0
+            self.rows, self.epoch, self.t0 = [], 0, time.time()
 
         def on_epoch_begin(self, epoch, logs=None):
             self.epoch = epoch
@@ -249,55 +289,115 @@ def make_progress_callback(total_epochs, bar, status, loss_ph, acc_ph):
             loss_ph.line_chart(df[["train_loss", "val_loss"]])
             acc_ph.line_chart(df[["train_acc", "val_acc"]])
             status.info(
-                f"Epoch {epoch + 1}/{total_epochs} — loss {logs.get('loss', 0):.3f} · "
-                f"acc {logs.get('accuracy', 0) * 100:.1f}% · val loss {logs.get('val_loss', 0):.3f} · "
-                f"val acc {logs.get('val_accuracy', 0) * 100:.1f}%")
+                f"Epoch {epoch + 1}/{total_epochs} finished after {(time.time() - self.t0) / 60:.1f} min — "
+                f"loss {logs.get('loss', 0):.3f} · acc {logs.get('accuracy', 0) * 100:.1f}% · "
+                f"val loss {logs.get('val_loss', 0):.3f} · val acc {logs.get('val_accuracy', 0) * 100:.1f}%")
 
     return _Live()
 
 
+def run_training(epochs, batch_size):
+    """Called when Start Training is pressed. Success is only reported if train.train_model()
+    returns real, verified metrics; every failure is shown as an error."""
+    release_data()  # free ~180 MB before training loads its own copy
+
+    log = st.status("Training started – keep this page open until it finishes", expanded=True)
+    bar = st.progress(0.0, text="Preparing…")
+    epoch_info = st.empty()
+    c_loss, c_acc = st.columns(2)
+    c_loss.caption("Loss (train vs validation)")
+    c_acc.caption("Accuracy (train vs validation)")
+    loss_ph, acc_ph = c_loss.empty(), c_acc.empty()
+
+    try:
+        cb = make_progress_callback(epochs, bar, epoch_info, loss_ph, acc_ph)
+        metrics = trainer.train_model(epochs=epochs, batch_size=batch_size,
+                                      callbacks=[cb], on_status=log.write)
+    except trainer.TrainingError as e:
+        log.update(label="Training failed", state="error")
+        st.error(f"❌ Training failed: {e}")
+        return
+    except MemoryError:
+        log.update(label="Training failed", state="error")
+        st.error("❌ Training failed: the server ran out of memory. Use a smaller batch size, or train on "
+                 "your own computer with `python train.py` and upload the `saved_model/` folder to GitHub.")
+        return
+    except Exception as e:
+        log.update(label="Training failed", state="error")
+        st.error(f"❌ Training failed with {type(e).__name__}: {e}")
+        with st.expander("Technical details (useful for debugging)"):
+            st.code(traceback.format_exc())
+        return
+
+    log.update(label="Training finished and verified", state="complete", expanded=False)
+    bar.progress(1.0, text="Done")
+    get_model.clear()  # forget the old (missing/old) model so the new file is loaded
+    st.session_state.flash = (
+        f"✅ Training finished. Real test accuracy on the official 10,000 test images: "
+        f"{metrics['test_accuracy'] * 100:.2f}% (top-5: {metrics['test_top5_accuracy'] * 100:.2f}%). "
+        f"Model saved to {core.MODEL_PATH.relative_to(core.BASE_DIR)}.")
+    st.rerun()  # re-run the whole page so the sidebar, Identify and Performance tabs see the new model
+
+
 def tab_train(model):
-    st.subheader("Train the CNN")
+    # Everything up to the button is plain, unconditional rendering - it cannot be skipped.
+    st.subheader("🏋️ Train the CNN")
+    st.markdown(
+        "1. Choose the settings below and press **Start Training**.\n"
+        "2. The app downloads CIFAR-100 (first time only), trains the network, saves it, reloads it from disk "
+        "and evaluates it on the official test images.\n"
+        "3. When it succeeds the page refreshes automatically and the sidebar shows the trained model.\n\n"
+        "⚠️ Keep this browser tab open while training. Moving a slider or clicking another button during "
+        "training restarts the page and **stops** the training."
+    )
+    st.caption("Streamlit Community Cloud has about 1 GB RAM, no GPU and a disk that is wiped on every restart or "
+               "redeploy. Training here is possible but slow and may run out of memory. Most reliable: run "
+               "`python train.py` on your own computer, then upload the `saved_model/` folder to GitHub.")
+
     exists = model is not None
+    with st.expander("Where the model is saved / loaded (diagnostics)"):
+        # Diagnostics are optional: they must never be able to stop the button below from rendering.
+        try:
+            model_file = core.MODEL_PATH
+            st.write(f"Model path: `{model_file}`")
+            st.write(f"Model file exists: **{model_file.exists()}**"
+                     + (f" ({model_file.stat().st_size / 1e6:.1f} MB)" if model_file.exists() else ""))
+            st.write(f"Loads correctly: **{exists}**")
+            st.write(f"Evaluation file (metrics.json) exists: **{core.METRICS_PATH.exists()}**")
+            try:
+                tf_installed = importlib.util.find_spec("tensorflow") is not None
+            except (ImportError, ValueError):
+                tf_installed = "tensorflow" in sys.modules
+            st.write(f"TensorFlow installed: **{tf_installed}**")
+        except Exception as e:
+            st.caption(f"(diagnostics unavailable: {e})")
 
     c1, c2, c3 = st.columns(3)
-    epochs = c1.slider("Maximum epochs", 5, 100, 40, help="Early stopping ends training sooner if validation loss stops improving.")
-    batch = c2.selectbox("Batch size", [64, 128, 256], index=1)
+    epochs = c1.slider("Maximum epochs", 1, 60, 15,
+                       help="Early stopping ends training sooner if validation loss stops improving.")
+    batch = c2.selectbox("Batch size", [32, 64, 128], index=1)
     force = c3.checkbox("Retrain even if a model exists", value=False, disabled=not exists)
 
     if exists and not force:
-        st.success("A valid trained model is already saved – training is skipped. "
+        st.success("A valid trained model is already saved and loaded – training is not needed. "
                    "Tick “Retrain…” if you want to overwrite it.")
-    else:
-        st.caption("Training uses 45,000 images, validates on 5,000 and finally tests once on the official "
-                   "10,000 test images. On a CPU-only computer this can take from several minutes to an hour or more; "
-                   "keep this browser tab open.")
+    elif not exists and core.MODEL_PATH.exists():
+        st.warning("A model file exists but could not be loaded (corrupt or incompatible). Training again will replace it.")
 
-    if exists and not st.session_state.get("metrics_exists", True):
+    if exists and not core.METRICS_PATH.exists():
+        st.warning("The model has no saved evaluation yet.")
         if st.button("Run evaluation on the official test set"):
-            with st.spinner("Evaluating…"):
-                core.evaluate_and_save(model)
-            st.rerun()
+            try:
+                with st.spinner("Evaluating on 10,000 test images…"):
+                    core.evaluate_and_save(model)
+            except Exception as e:
+                st.error(f"❌ Evaluation failed: {type(e).__name__}: {e}")
+            else:
+                st.rerun()
 
-    if st.button("🚀 Start training", type="primary", disabled=(exists and not force)):
-        bar = st.progress(0.0, text="Preparing data (first run downloads CIFAR-100)…")
-        status = st.empty()
-        c_loss, c_acc = st.columns(2)
-        c_loss.caption("Loss")
-        c_acc.caption("Accuracy")
-        loss_ph, acc_ph = c_loss.empty(), c_acc.empty()
-        try:
-            cb = make_progress_callback(epochs, bar, status, loss_ph, acc_ph)
-            metrics = core.train_model(epochs=epochs, batch_size=batch, callbacks=[cb], verbose=0)
-        except Exception as e:
-            st.error(f"Training failed: {e}")
-            return
-        bar.progress(1.0, text="Done")
-        get_model.clear()
-        st.session_state.flash = (f"Training finished. Real test accuracy on the official 10,000 test images: "
-                                  f"{metrics['test_accuracy'] * 100:.2f}% "
-                                  f"(top-5: {metrics['test_top5_accuracy'] * 100:.2f}%).")
-        st.rerun()
+    start = st.button("🚀 Start Training", type="primary", disabled=(exists and not force))
+    if start:
+        run_training(epochs, batch)
 
 
 # --------------------------------------------------------------------------- #
@@ -385,16 +485,30 @@ def tab_performance(model):
 
 
 # --------------------------------------------------------------------------- #
-# Tab: Dataset
+# Tab: Dataset (images are loaded only on request, to save memory)
 # --------------------------------------------------------------------------- #
 def tab_dataset():
     st.subheader("CIFAR-100 dataset")
-    with st.spinner("Loading dataset (downloads automatically on the first run)…"):
-        try:
+    st.write("CIFAR-100 (official split): **50,000** training images, **10,000** test images, "
+             "**100** classes, each image **32×32 RGB**.")
+
+    if not st.session_state.dataset_loaded:
+        st.info("To save memory (important on Streamlit Community Cloud) the images are only loaded when you ask. "
+                "The first load downloads about 160 MB.")
+        if st.button("📥 Load dataset and show sample images"):
+            st.session_state.dataset_loaded = True
+            st.rerun()
+        show_class_names()
+        return
+
+    try:
+        with st.spinner("Loading dataset…"):
             x_train, y_train, x_test, y_test = get_data()
-        except Exception as e:
-            st.error(f"Could not load the dataset: {e}\n\nCheck your internet connection for the first download.")
-            return
+    except Exception as e:
+        st.session_state.dataset_loaded = False
+        st.error(f"Could not load the dataset: {type(e).__name__}: {e}\n\n"
+                 "The server needs internet access for the first download.")
+        return
 
     c = st.columns(5)
     c[0].metric("Training images", f"{len(x_train):,}")
@@ -415,11 +529,10 @@ def tab_dataset():
         choice.lower().replace(" ", "_"))
     show_fig(sample_grid(x_train, y_train, cls, st.session_state.shuffle_seed))
 
-    with st.expander("All 100 class names"):
-        names = [core.pretty_name(n) for n in core.CLASS_NAMES]
-        cols = st.columns(4)
-        for i, col in enumerate(cols):
-            col.write("\n".join(f"{j}. {names[j]}" for j in range(i * 25, (i + 1) * 25)))
+    show_class_names()
+    if st.button("🧹 Release dataset from memory"):
+        release_data()
+        st.rerun()
 
 
 # --------------------------------------------------------------------------- #
@@ -451,14 +564,24 @@ those 100 categories – nothing else.
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
-if "uploader_key" not in st.session_state:
-    st.session_state.uploader_key = 0
-if "shuffle_seed" not in st.session_state:
-    st.session_state.shuffle_seed = 0
+def render_safely(container, func, *args):
+    """Render one tab. If it raises, show the error INSIDE that tab and carry on, so a problem in
+    one tab can never blank the others. (st.rerun()/st.stop() are BaseExceptions and pass through.)"""
+    with container:
+        try:
+            func(*args)
+        except Exception as e:
+            st.error(f"This section failed to display: {type(e).__name__}: {e}")
+            with st.expander("Technical details"):
+                st.code(traceback.format_exc())
+
+
+st.session_state.setdefault("uploader_key", 0)
+st.session_state.setdefault("shuffle_seed", 0)
+st.session_state.setdefault("dataset_loaded", False)
 
 model = get_model()
 metrics_file = core.load_json(core.METRICS_PATH)
-st.session_state.metrics_exists = metrics_file is not None
 
 flash = st.session_state.pop("flash", None)
 if flash:
@@ -468,7 +591,7 @@ with st.sidebar:
     st.header("Model status")
     if model is None:
         st.error("No trained model yet")
-        st.caption("Go to the Train Model tab.")
+        st.caption("Go to the 🏋️ Train Model tab.")
     else:
         st.success("Trained model loaded")
         if metrics_file:
@@ -476,18 +599,20 @@ with st.sidebar:
             st.metric("Top-5 accuracy", fmt_pct(metrics_file["test_top5_accuracy"]))
         else:
             st.caption("Model found, but no evaluation saved yet.")
+    if st.button("🔄 Refresh model status"):
+        get_model.clear()
+        st.rerun()
     st.divider()
     st.caption("Built with Streamlit · TensorFlow/Keras · CIFAR-100")
 
-t1, t2, t3, t4, t5 = st.tabs(["🔍 Identify Image", "📊 Model Performance", "🗂️ Dataset Explorer",
-                              "🏋️ Train Model", "ℹ️ About & Limits"])
-with t1:
-    tab_identify(model)
-with t2:
-    tab_performance(model)
-with t3:
-    tab_dataset()
-with t4:
-    tab_train(model)
-with t5:
-    tab_about()
+# The order the user SEES (left to right) ...
+t_identify, t_perf, t_data, t_train, t_about = st.tabs(
+    ["🔍 Identify Image", "📊 Model Performance", "🗂️ Dataset Explorer", "🏋️ Train Model", "ℹ️ About & Limits"])
+
+# ... is independent of the order the code RUNS in. The Train tab goes first and the
+# heaviest tab (Dataset) goes last, so nothing can stop the Train tab from rendering.
+render_safely(t_train, tab_train, model)
+render_safely(t_identify, tab_identify, model)
+render_safely(t_perf, tab_performance, model)
+render_safely(t_about, tab_about)
+render_safely(t_data, tab_dataset)
