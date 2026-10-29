@@ -2,7 +2,7 @@
 Tasveer Pehchan: CIFAR-100 model (local) + Gemini (sirf jab model ko yaqeen na ho).
 
 Chalane ke liye:  streamlit run app.py
-Files ek hi folder mein hon:  app.py, cifar100_model.keras, metrics.json (optional)
+Files ek hi folder mein hon:  app.py, cifar100_cnn.keras, metrics.json (optional)
 Secrets:  GEMINI_API_KEY = "..."   (optional: GEMINI_MODEL, APP_PASSWORD)
 """
 from __future__ import annotations
@@ -20,10 +20,10 @@ from PIL import Image, ImageOps
 
 st.set_page_config(page_title="Tasveer Pehchan", page_icon="🔍", layout="centered")
 
-MODEL_PATH = "cifar100_model.keras"
+MODEL_PATH = "cifar100_cnn.keras"
 METRICS_PATH = "metrics.json"
 RESCALE = True            # True: pixels /255. Agar training mein /255 nahi kiya tha to False karein
-THRESHOLD = 0.60          # model ka top confidence is se kam ho to Gemini se poochein
+THRESHOLD = 0.50          # model ka top confidence is se kam ho to Gemini se poochein
 API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-flash-latest"
 
@@ -107,7 +107,7 @@ model = load_model()
 if os.path.exists(METRICS_PATH):
     m = json.load(open(METRICS_PATH))
     st.info(f"📊 Model ki test accuracy: **{m.get('test_accuracy', 0) * 100:.2f}%**  "
-            f"(top-5: {m.get('top5_accuracy', 0) * 100:.2f}%)")
+            f"(top-5: {m.get('test_top5_accuracy', 0) * 100:.2f}%)")
 
 up = st.file_uploader("Tasveer chunein", type=["jpg", "jpeg", "png", "webp"])
 if up:
