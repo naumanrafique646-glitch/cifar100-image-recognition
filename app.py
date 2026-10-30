@@ -71,6 +71,9 @@ def predict_local(img: Image.Image, model, top_k: int = 3):
 
 
 # --------------------------------- Gemini ---------------------------------- #
+FALLBACKS = ["gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-flash-latest"]
+
+
 @st.cache_data(show_spinner=False, max_entries=200)
 def ask_gemini(img_hash: str, jpeg: bytes, api_key: str, model: str) -> dict:
     body = {
@@ -80,23 +83,34 @@ def ask_gemini(img_hash: str, jpeg: bytes, api_key: str, model: str) -> dict:
         ]}],
         "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"},
     }
-    r = None
-    for attempt in range(3):                      # timeout aaye to 3 bar koshish
+    errors = []
+    for m in dict.fromkeys([model] + FALLBACKS):      # ek model na chale to agla try hota hai
         try:
-            r = requests.post(f"{API_BASE}/models/{model}:generateContent",
+            r = requests.post(f"{API_BASE}/models/{m}:generateContent",
                               headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-                              json=body, timeout=40)
-            if r.status_code not in (500, 503):
-                break
-        except requests.exceptions.RequestException:
-            if attempt == 2:
-                raise RuntimeError("Gemini server ne jawab nahi diya (timeout). Thori der baad dobara try karein.")
-    if r.status_code == 429:
-        raise RuntimeError("Gemini ki free limit poori ho gayi. Thori der baad try karein.")
-    if not r.ok:
-        raise RuntimeError(f"Gemini error {r.status_code}. Key/model check karein.")
-    text = "".join(p.get("text", "") for p in r.json()["candidates"][0]["content"]["parts"])
-    return json.loads(text[text.find("{"): text.rfind("}") + 1])
+                              json=body, timeout=30)
+        except requests.exceptions.Timeout:
+            errors.append(f"{m}: timeout")
+            continue
+        except requests.exceptions.RequestException as e:
+            errors.append(f"{m}: network error ({type(e).__name__})")
+            continue
+        if r.status_code == 429:
+            raise RuntimeError("Gemini ki free limit poori ho gayi. Thori der baad try karein.")
+        if r.status_code in (400, 401, 403):
+            msg = r.json().get("error", {}).get("message", "")[:200] if r.content else ""
+            raise RuntimeError(f"Gemini key/request ka masla ({r.status_code}): {msg}")
+        if not r.ok:
+            errors.append(f"{m}: error {r.status_code}")
+            continue
+        try:
+            text = "".join(p.get("text", "") for p in r.json()["candidates"][0]["content"]["parts"])
+            out = json.loads(text[text.find("{"): text.rfind("}") + 1])
+            out["_model"] = m
+            return out
+        except Exception:
+            errors.append(f"{m}: jawab samajh nahi aaya")
+    raise RuntimeError("Gemini se jawab nahi mila. Koshishein: " + " | ".join(errors))
 
 
 # ----------------------------------- UI ------------------------------------ #
@@ -149,6 +163,7 @@ if up:
             else:
                 st.success(f"**Gemini:** {g.get('naam', '')} ({g.get('yaqeen', '')})")
             st.write(g.get("tafseel", ""))
+            st.caption(f"Gemini model: {g.get('_model', '')}")
         except Exception as e:
             st.error(str(e))
     elif use_gemini:
