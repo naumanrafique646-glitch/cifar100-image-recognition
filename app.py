@@ -22,7 +22,7 @@ st.set_page_config(page_title="Tasveer Pehchan", page_icon="🔍", layout="cente
 
 MODEL_PATH = "cifar100_effnet.keras"
 METRICS_PATH = "metrics.json"
-RESCALE = False            # True: pixels /255. Agar training mein /255 nahi kiya tha to False karein
+RESCALE = False           # True: pixels /255. Agar training mein /255 nahi kiya tha to False karein
 THRESHOLD = 0.50          # model ka top confidence is se kam ho to Gemini se poochein
 API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-flash-latest"
@@ -80,9 +80,17 @@ def ask_gemini(img_hash: str, jpeg: bytes, api_key: str, model: str) -> dict:
         ]}],
         "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"},
     }
-    r = requests.post(f"{API_BASE}/models/{model}:generateContent",
-                      headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-                      json=body, timeout=90)
+    r = None
+    for attempt in range(3):                      # timeout aaye to 3 bar koshish
+        try:
+            r = requests.post(f"{API_BASE}/models/{model}:generateContent",
+                              headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+                              json=body, timeout=40)
+            if r.status_code not in (500, 503):
+                break
+        except requests.exceptions.RequestException:
+            if attempt == 2:
+                raise RuntimeError("Gemini server ne jawab nahi diya (timeout). Thori der baad dobara try karein.")
     if r.status_code == 429:
         raise RuntimeError("Gemini ki free limit poori ho gayi. Thori der baad try karein.")
     if not r.ok:
@@ -128,7 +136,7 @@ if up:
     use_gemini = True
     if use_gemini and key:
         small = img.copy()
-        small.thumbnail((1024, 1024))
+        small.thumbnail((768, 768))
         buf = io.BytesIO()
         small.save(buf, "JPEG", quality=88)
         jpeg = buf.getvalue()
