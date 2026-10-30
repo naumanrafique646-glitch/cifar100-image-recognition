@@ -125,7 +125,7 @@ if up:
     low = best_p < THRESHOLD
     if low:
         st.warning("Model ko yaqeen kam hai, is liye Gemini se poocha ja raha hai.")
-    use_gemini = low or st.button("🤖 Gemini se bhi poochein")
+    use_gemini = True
     if use_gemini and key:
         small = img.copy()
         small.thumbnail((1024, 1024))
