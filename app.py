@@ -39,10 +39,13 @@ CLASSES = ["apple", "aquarium_fish", "baby", "bear", "beaver", "bed", "bee", "be
            "sweet_pepper", "table", "tank", "telephone", "television", "tiger", "tractor", "train", "trout",
            "tulip", "turtle", "wardrobe", "whale", "willow_tree", "wolf", "woman", "worm"]
 
-PROMPT = """Is tasveer ko dhyan se dekho aur batao is mein kya hai.
-Sirf wahi batao jo SAAF nazar aa raha ho. Pakka yaqeen na ho to andaza mat lagao.
-Roman Urdu mein likho. Sirf JSON do:
-{"naam": "main cheez", "tafseel": "2-3 jumle", "yaqeen": "high/medium/low", "pata_nahi": true ya false}"""
+PROMPT = """Tum ek tasveer pehchanne wale expert ho. Tasveer dhyan se dekho aur batao is mein kya hai.
+Rules: sirf wahi batao jo SAAF nazar aa raha ho ya likha parha ja raha ho. Brand/product ka naam text se parh kar batao.
+Pakka yaqeen na ho to andaza mat lagao: pata_nahi true karo. Roman Urdu mein likho (cheezon ke naam English mein ho sakte hain).
+Sirf JSON do:
+{"naam": "main cheez ka naam", "qism": "category (makeup, phal, jaanwar, gaari, imarat, ...)",
+ "likha_hua_text": "tasveer par parha gaya text, warna khali", "tafseel": "2-3 jumle",
+ "doosri_cheezein": ["doosri cheezein"], "yaqeen": "high/medium/low", "pata_nahi": true ya false}"""
 
 
 def get_setting(name: str, default: str = "") -> str:
@@ -128,27 +131,17 @@ model = load_model()
 
 if os.path.exists(METRICS_PATH):
     m = json.load(open(METRICS_PATH))
-    st.info(f"📊 Model ki test accuracy: **{m.get('test_accuracy', 0) * 100:.2f}%**  "
+    st.info(f"📊 CIFAR-100 model ki accuracy (sirf 100 qisam ki tasveeron par): **{m.get('test_accuracy', 0) * 100:.2f}%**  "
             f"(top-5: {m.get('test_top5_accuracy', 0) * 100:.2f}%)")
 
 up = st.file_uploader("Tasveer chunein", type=["jpg", "jpeg", "png", "webp"])
 if up:
-    raw = up.getvalue()
-    img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(up.getvalue()))).convert("RGB")
     st.image(img, use_container_width=True)
 
-    top = predict_local(img, model)
-    best_name, best_p = top[0]
-    st.subheader(f"Model: {best_name} ({best_p * 100:.1f}%)")
-    st.progress(min(best_p, 1.0))
-    st.caption("Top 3: " + " | ".join(f"{n} {p * 100:.1f}%" for n, p in top))
-
     key = get_setting("GEMINI_API_KEY")
-    low = best_p < THRESHOLD
-    if low:
-        st.warning("Model ko yaqeen kam hai, is liye Gemini se poocha ja raha hai.")
-    use_gemini = True
-    if use_gemini and key:
+    gem = None
+    if key:
         small = img.copy()
         small.thumbnail((768, 768))
         buf = io.BytesIO()
@@ -156,18 +149,38 @@ if up:
         jpeg = buf.getvalue()
         try:
             with st.spinner("Gemini dekh raha hai..."):
-                g = ask_gemini(hashlib.md5(jpeg).hexdigest(), jpeg, key,
-                               get_setting("GEMINI_MODEL", DEFAULT_MODEL))
-            if g.get("pata_nahi"):
-                st.write("**Gemini:** pata nahi / yaqeen kam")
-            else:
-                st.success(f"**Gemini:** {g.get('naam', '')} ({g.get('yaqeen', '')})")
-            st.write(g.get("tafseel", ""))
-            st.caption(f"Gemini model: {g.get('_model', '')}")
+                gem = ask_gemini(hashlib.md5(jpeg).hexdigest(), jpeg, key,
+                                 get_setting("GEMINI_MODEL", DEFAULT_MODEL))
         except Exception as e:
             st.error(str(e))
-    elif use_gemini:
-        st.info("GEMINI_API_KEY set nahi, is liye sirf model ka jawab hai.")
+    else:
+        st.info("GEMINI_API_KEY set nahi, is liye sirf local model ka jawab hai.")
+
+    if gem:
+        unsure = bool(gem.get("pata_nahi")) or str(gem.get("yaqeen", "")).lower() == "low"
+        if unsure:
+            st.subheader("Pata nahi / yaqeen kam hai")
+            if gem.get("naam"):
+                st.caption(f"Sab se mumkin: {gem['naam']} (pakka nahi)")
+        else:
+            st.caption(str(gem.get("qism", "")).upper())
+            st.header(gem.get("naam", ""))
+            st.caption(f"Yaqeen: {gem.get('yaqeen', '')}")
+        if gem.get("likha_hua_text"):
+            st.markdown(f"**Tasveer par likha hua:** {gem['likha_hua_text']}")
+        if gem.get("tafseel"):
+            st.markdown(f"**Tafseel:** {gem['tafseel']}")
+        others = gem.get("doosri_cheezein") or []
+        if others:
+            st.markdown("**Doosri cheezein:** " + ", ".join(str(o) for o in others))
+        st.caption(f"Gemini model: {gem.get('_model', '')}")
+
+    top = predict_local(img, model)
+    with st.expander("CIFAR-100 local model ka jawab (sirf 100 qisam ki cheezein jaanta hai)",
+                     expanded=gem is None):
+        st.write(f"**{top[0][0]}** ({top[0][1] * 100:.1f}%)")
+        st.caption("Top 3: " + " | ".join(f"{n} {p * 100:.1f}%" for n, p in top))
+        st.caption("Ye model apni 100 qisam se bahar ki cheez par ghalat ho sakta hai, chahe yaqeen 100% dikhaye.")
 
 st.divider()
-st.caption("CIFAR-100 sirf 100 qisam ki cheezein jaanta hai. Is se bahar ki tasveer par model ghalat ho sakta hai.")
+st.caption("Ye AI hai, is se ghalti ho sakti hai. Zaroori faislon ke liye khud bhi check karein.")
