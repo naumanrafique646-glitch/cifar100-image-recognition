@@ -20,9 +20,9 @@ from PIL import Image, ImageOps
 
 st.set_page_config(page_title="Tasveer Pehchan", page_icon="🔍", layout="centered")
 
-MODEL_PATH = "cifar100_cnn.keras"
+MODEL_PATH = "cifar100_effnet.keras"
 METRICS_PATH = "metrics.json"
-RESCALE = True            # True: pixels /255. Agar training mein /255 nahi kiya tha to False karein
+RESCALE = False            # True: pixels /255. Agar training mein /255 nahi kiya tha to False karein
 THRESHOLD = 0.50          # model ka top confidence is se kam ho to Gemini se poochein
 API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-flash-latest"
