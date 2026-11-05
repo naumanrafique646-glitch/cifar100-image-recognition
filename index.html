@@ -1,34 +1,27 @@
 <!DOCTYPE html>
-<html lang="ur">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Image Recognition</title>
-<style>
-body{font-family:sans-serif;background:#111;color:#eee;text-align:center;padding:16px;margin:0}
-img{max-width:100%;max-height:300px;border-radius:12px;margin:12px 0}
-li{list-style:none;margin:6px 0}
-</style>
-</head>
-<body>
-<h2>Tasveer Pehchano</h2>
-<p id="st">Model load ho raha hai...</p>
-<input type="file" id="f" accept="image/*" disabled><br>
-<img id="im">
-<ul id="out" style="padding:0"></ul>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1"></script>
+<html lang="ur"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tasveer Pehchano</title>
+<style>body{font-family:sans-serif;background:#111;color:#eee;text-align:center;padding:16px;margin:0}img{max-width:100%;max-height:300px;border-radius:12px;margin:12px 0}#out{white-space:pre-wrap;text-align:left;max-width:600px;margin:auto;line-height:1.6}</style></head>
+<body><h2>Tasveer Pehchano</h2>
+<input type="file" id="f" accept="image/*"><br><img id="im"><div id="out"></div>
 <script>
-let m;
-mobilenet.load().then(x=>{m=x;st.textContent="Tayyar! Tasveer chunein";f.disabled=false});
+const WURL="https://fancy-night-5d70.0naumanali98.workers.dev";
 f.onchange=()=>{
- im.onload=async()=>{
-  out.innerHTML="Dekh raha hoon...";
-  const r=await m.classify(im,5);
-  out.innerHTML=r.map(p=>"<li>"+p.className+" - "+Math.round(p.probability*100)+"%</li>").join("");
- };
- im.src=URL.createObjectURL(f.files[0]);
+const file=f.files[0];if(!file)return;
+im.src=URL.createObjectURL(file);
+out.textContent="Dekh raha hoon...";
+const img=new Image();
+img.onload=async()=>{
+const s=Math.min(1,1024/Math.max(img.width,img.height));
+const c=document.createElement("canvas");
+c.width=img.width*s;c.height=img.height*s;
+c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+const data=c.toDataURL("image/jpeg",0.85).split(",")[1];
+try{
+const r=await fetch(WURL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:data,mime:"image/jpeg"})});
+const j=await r.json();
+out.textContent=j.text;
+}catch(e){out.textContent="Masla: "+e.message}
 };
-</script>
-</body>
-</html>
+img.src=im.src;
+};
+</script></body></html>
