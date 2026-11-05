@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Tasveer Pehchano | Tasveer se cheez pehchano</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Daryaft | Tasveer se cheez pehchano</title>
 <meta name="description" content="Koi bhi tasveer chuno. Model 1000 qisam ki cheezein pehchanta hai aur Gemini Roman Urdu mein poori tafseel batata hai.">
-<meta property="og:title" content="Tasveer Pehchano"><meta property="og:description" content="Tasveer chuno, cheez ka naam aur tafseel pao."><meta property="og:type" content="website">
+<meta property="og:title" content="Daryaft"><meta property="og:description" content="Tasveer chuno, cheez ka naam aur tafseel pao."><meta property="og:type" content="website">
 <meta name="theme-color" content="#0a0f1f"><meta name="color-scheme" content="dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0f1f'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%23e8cb94' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%23e8cb94'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0f1f;--glass:rgba(255,255,255,.055);--line:rgba(255,255,255,.13);--ink:#eef1f8;--mute:#9aa4bd;--gold:#e8cb94;--gold2:#b98e4a;--vio:#8b7cf6;--hd:"Bricolage Grotesque",Figtree,system-ui,sans-serif}
@@ -121,7 +121,7 @@ footer .wrap{flex-direction:row;justify-content:space-between;align-items:center
 </style></head>
 <body>
 <header class="nav"><div class="wrap">
-<a class="brand" href="#top"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke-linecap="round"/></svg>Tasveer Pehchano</a>
+<a class="brand" href="#top"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke-linecap="round"/></svg>Daryaft</a>
 <nav class="nl" aria-label="Main"><a class="lk" href="#how">Kaise chalta hai</a><a class="lk" href="#faq">Sawalat</a><a class="btn" href="#tryit">Tasveer chuno</a></nav>
 </div></header>
 
@@ -191,7 +191,7 @@ window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e
 </main>
 
 <footer><div class="wrap">
-<span>Tasveer Pehchano. MobileNet (1000 qisam), CIFAR-100 aur Gemini se chalta hai.</span>
+<span>Daryaft. MobileNet (1000 qisam) aur Gemini se chalta hai.</span>
 <nav class="fl2" aria-label="Footer"><a href="#tryit">Aazmao</a><a href="#how">Kaise chalta hai</a><a href="#faq">Sawalat</a><a href="#top">Upar jao</a></nav>
 </div></footer>
 <noscript><p style="text-align:center;padding:16px">Is page ke liye JavaScript chalu karna zaroori hai.</p></noscript>
@@ -200,23 +200,21 @@ window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e
 st.textContent="Script chal gayi";
 const W="https://fancy-night-5d70.0naumanali98.workers.dev";
 const TH=0.97,Q=3000;
-const K="NoMi-12nAuMAn3456789";
+const K="NoMi-12nAuMAn345";
 const CN="apple aquarium_fish baby bear beaver bed bee beetle bicycle bottle bowl boy bridge bus butterfly camel can castle caterpillar cattle chair chimpanzee clock cloud cockroach couch crab crocodile cup dinosaur dolphin elephant flatfish forest fox girl hamster house kangaroo keyboard lamp lawn_mower leopard lion lizard lobster man maple_tree motorcycle mountain mouse mushroom oak_tree orange orchid otter palm_tree pear pickup_truck pine_tree plain plate poppy porcupine possum rabbit raccoon ray road rocket rose sea seal shark shrew skunk skyscraper snail snake spider squirrel streetcar sunflower sweet_pepper table tank telephone television tiger tractor train trout tulip turtle wardrobe whale willow_tree wolf woman worm".split(" ");
 let cif=null;
 let net=null,mem=[],err=false,note="",cur=null,curH=null;
 const t0=Date.now();
 const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="Model load ho raha hai... "+Math.round((Date.now()-t0)/1000)+" second. Tasveer abhi chun sakte hain."+note},1000);
-function ld(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("file download nahi hui"));document.head.appendChild(s)})}
+function ld(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.async=false;s.src=src;s.onload=ok;s.onerror=()=>no(new Error("file download nahi hui"));document.head.appendChild(s)})}
 async function init(){
 try{const r=await fetch(W);const tx2=await r.text();
 mem=tx2.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){return null}}).filter(Boolean);}
 catch(e){note=" (Yaadasht nahi mili: "+e.message+")"}
 try{
-await ld("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0");
-await ld("https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1");
+const p1=ld("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0"),p2=ld("https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1");await p1;await p2;
 await tf.setBackend("cpu");await tf.ready();
 net=await mobilenet.load();
-try{cif=await tf.loadGraphModel("cifar_model/model.json")}catch(e){note+=" (CIFAR model nahi mila)"}
 clearInterval(tick);
 st.textContent="Tayyar. Yaadasht mein "+mem.length+" tasveerein hain."+note;
 }catch(e){err=true;clearInterval(tick);
