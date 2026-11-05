@@ -39,7 +39,7 @@ function emb(img){return tf.tidy(()=>{const e=net.infer(img,true);const n=e.div(
 async function hsh(file){const b=await file.arrayBuffer();const d=await crypto.subtle.digest("SHA-256",b);return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,"0")).join("")}
 function cos(a,b){let d=0,x=0,y=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}return d/Math.sqrt(x*y+1e-9)}
 async function save(e,t,h){
-try{const r=await fetch(W+"/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({e:e,t:t,h:h});const j=await r.json();return j.ok?"ho gaya":"nahi hua (server ne mana kiya)"}
+try{const r=await fetch(W+"/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({e:e,t:t,h:h})});const j=await r.json();return j.ok?"ho gaya":"nahi hua (server ne mana kiya)"}
 catch(x){return "nahi hua ("+x.message+")"}
 }
 f.onchange=async()=>{const file=f.files[0];if(!file)return;box.style.display="none";cur=null;out.textContent="Dekh raha hoon...";curH=await hsh(file);im.src=URL.createObjectURL(file)};im.onload=()=>run(false);
