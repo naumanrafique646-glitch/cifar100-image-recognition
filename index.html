@@ -43,8 +43,7 @@ st.textContent="Model load nahi hua ("+e.message+"). Gemini phir bhi kaam karega
 init();
 function emb(img){return tf.tidy(()=>{const e=net.infer(img,true);const n=e.div(e.norm());return Array.from(n.dataSync()).map(v=>Math.round(v*Q))})}
 async function hsh(file){const b=await file.arrayBuffer();const d=await crypto.subtle.digest("SHA-256",b);return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,"0")).join("")}
-function cp(img){const h=img.naturalHeight,w=img.naturalWidth,s=Math.min(h,w),c=document.createElement("canvas");c.width=c.height=32;const g=c.getContext("2d");g.imageSmoothingQuality="high";g.drawImage(img,(w-s)/2,(h-s)/2,s,s,0,0,32,32);return tf.tidy(()=>{const p=cif.predict(tf.browser.fromPixels(c).toFloat().div(255).expandDims(0));return Array.from(p.dataSync())})}
-function cos(a,b){let d=0,x=0,y=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}return d/Math.sqrt(x*y+1e-9)}
+function cp(img){const h=img.naturalHeight,w=img.naturalWidth,s=Math.min(h,w),c=document.createElement("canvas");c.width=c.height=32;const g=c.getContext("2d");g.imageSmoothingQuality="high";g.drawImage(img,(w-s)/2,(h-s)/2,s,s,0,0,32,32);return tf.tidy(()=>{const p=cif.predict(tf.browser.fromPixels(c).toFloat().expandDims(0));return Array.from(p.dataSync())})}function cos(a,b){let d=0,x=0,y=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}return d/Math.sqrt(x*y+1e-9)}
 async function save(e,t,h){
 try{const r=await fetch(W+"/save",{method:"POST",headers:{"Content-Type":"application/json","x-token":K},body:JSON.stringify({e:e,t:t,h:h})});const j=await r.json();return j.ok?"ho gaya":"nahi hua (server ne mana kiya)"}
 catch(x){return "nahi hua ("+x.message+")"}
