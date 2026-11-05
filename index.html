@@ -62,6 +62,7 @@ button:focus-visible,#tx:focus-visible{outline:2px solid var(--gold);outline-off
 .hint{color:var(--mute);font-size:13px;margin:0}
 footer{text-align:center;color:var(--mute);font-size:13px;margin-top:28px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#c1{margin-top:6px}#c1:empty{display:none}
 </style></head>
 <body><div class="wrap">
 <header>
@@ -81,7 +82,7 @@ window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e
 
 <section id="res" aria-live="polite">
 <div class="pic"><img id="im" alt="Chuni hui tasveer"></div>
-<div class="sec"><h2>Model ne pehchana</h2><div id="cf"></div></div>
+<div class="sec"><h2>Model ne pehchana (1000 qisam)</h2><div id="cf"></div><p class="hint" id="c1"></p></div>
 <div class="sec"><h2>Gemini ka jawab</h2><div id="out"></div></div>
 <div class="sec" id="box"><div class="act">
 <button id="bt">Ghalat hai? Gemini se dobara poocho</button>
@@ -91,7 +92,7 @@ window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e
 </div></div>
 </section>
 </main>
-<footer>CIFAR-100 model aur Gemini se chalta hai</footer>
+<footer>MobileNet (1000 qisam), CIFAR-100 aur Gemini se chalta hai</footer>
 </div>
 
 <script>
@@ -144,9 +145,11 @@ tx.value="";
 };
 async function run(force){
 let e=null,best=0,ans=null,hit=null;
-cf.textContent="";
-if(cif){try{const q=cp(im).map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,3);
-cf.innerHTML=q.map(x=>{const p=Math.round(x[0]*100);return '<div class="row"><span class="nm">'+CN[x[1]].replace(/_/g," ")+'</span><div class="tr"><div class="fl" style="width:'+Math.max(p,2)+'%"></div></div><span class="pc">'+p+'%</span></div>'}).join("")}catch(x){cf.textContent="CIFAR error: "+x.message}}
+cf.textContent="";c1.textContent="";
+if(net){try{const P=await net.classify(im,3);
+cf.innerHTML=P.map(x=>{const p=Math.round(x.probability*100);return '<div class="row"><span class="nm">'+x.className.split(",")[0]+'</span><div class="tr"><div class="fl" style="width:'+Math.max(p,2)+'%"></div></div><span class="pc">'+p+'%</span></div>'}).join("");
+if(P[0].probability<0.4)cf.innerHTML+='<p class="hint">Model ko pakka yaqeen nahi. Neeche Gemini ka jawab zyada bharosemand hai.</p>'}catch(x){cf.textContent="Model error: "+x.message}}else{cf.textContent="Model load nahi hua."}
+if(cif){try{const q=cp(im).map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0])[0];c1.textContent="CIFAR-100 ki raaye: "+CN[q[1]].replace(/_/g," ")+" "+Math.round(q[0]*100)+"%"}catch(x){}}
 if(!force&&curH){for(const m of mem){if(m.h===curH)hit=m.t}}
 if(net){try{e=emb(im);cur=e;for(const m of mem){const sc=cos(e,m.e);if(sc>=best){best=sc;ans=m.t}}}catch(x){e=null}}
 if(hit){out.textContent=cl(hit)+"\n\n(Yaadasht se, bilkul wohi tasveer)";box.style.display="block";return}
