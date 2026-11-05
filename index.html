@@ -42,8 +42,7 @@ async function save(e,t,h){
 try{const r=await fetch(W+"/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({e:e,t:t,h:h});const j=await r.json();return j.ok?"ho gaya":"nahi hua (server ne mana kiya)"}
 catch(x){return "nahi hua ("+x.message+")"}
 }
-f.onchange=()=>{const file=f.files[0];if(!file)return;box.style.display="none";cur=null;out.textContent="Dekh raha hoon...";cur=null;curH=await hsh(file);im.src=URL.createObjectURL(file)};
-im.onload=()=>run(false);
+f.onchange=async()=>{const file=f.files[0];if(!file)return;box.style.display="none";cur=null;out.textContent="Dekh raha hoon...";curH=await hsh(file);im.src=URL.createObjectURL(file)};im.onload=()=>run(false);
 bt.onclick=()=>run(true);
 sv.onclick=async()=>{
 const t=tx.value.trim();
