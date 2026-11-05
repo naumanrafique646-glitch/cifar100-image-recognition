@@ -1,20 +1,101 @@
 <!DOCTYPE html>
-<html lang="ur"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tasveer Pehchano</title>
-<style>body{font-family:sans-serif;background:#111;color:#eee;text-align:center;padding:16px;margin:0}img{max-width:100%;max-height:300px;border-radius:12px;margin:12px 0}#out{white-space:pre-wrap;text-align:left;max-width:600px;margin:auto;line-height:1.6}button{margin:8px;padding:10px 16px;border-radius:8px;border:0;background:#2a5;color:#fff;font-size:15px}#tx{width:85%;max-width:500px;padding:10px;border-radius:8px;border:1px solid #444;background:#222;color:#eee;font-size:15px}#box{display:none;margin-top:12px}</style></head>
-<body><h2>Tasveer Pehchano</h2>
-<p id="st">v7: page khula, script ka intezar...</p>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Tasveer Pehchano</title>
+<meta name="theme-color" content="#0a0f1f"><meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0f1f;--glass:rgba(255,255,255,.055);--line:rgba(255,255,255,.13);--ink:#eef1f8;--mute:#9aa4bd;--gold:#e8cb94;--gold2:#b98e4a;--vio:#8b7cf6}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;color-scheme:dark}
+body{margin:0;color:var(--ink);font-family:Figtree,system-ui,sans-serif;line-height:1.6;padding:0 0 48px;min-height:100vh;
+background:radial-gradient(800px 480px at 90% -8%,rgba(139,124,246,.30),transparent 60%),radial-gradient(640px 420px at -10% 6%,rgba(232,203,148,.13),transparent 60%),var(--bg);background-attachment:fixed}
+.wrap{max-width:620px;margin:0 auto;padding:0 18px}
+header{padding:32px 0 6px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--gold);font-weight:600;font-size:14px;letter-spacing:.02em;margin-bottom:22px}
+.brand svg{width:26px;height:26px;stroke:var(--gold);fill:none;stroke-width:1.6}
+h1{font-family:"Bricolage Grotesque",Figtree,sans-serif;font-weight:800;font-size:clamp(38px,11vw,58px);line-height:1;margin:0 0 14px;letter-spacing:-.03em}
+.sub{color:var(--mute);margin:0 0 20px;font-size:16px;max-width:30em}
+#st{display:inline-flex;align-items:center;gap:8px;margin:0;padding:7px 14px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13px;color:var(--mute);max-width:100%;overflow-wrap:anywhere}
+#st::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--gold)}
+#f{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;margin:26px 0;padding:44px 20px;border-radius:26px;background:var(--glass);border:1px solid var(--line);cursor:pointer;text-align:center;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);transition:border-color .2s,background .2s}
+.drop:active{background:rgba(255,255,255,.1);border-color:var(--gold)}
+#f:focus-visible+.drop{outline:2px solid var(--gold);outline-offset:4px}
+.drop i{position:absolute;width:22px;height:22px;border:2px solid var(--gold);opacity:.85}
+.drop i:nth-of-type(1){top:14px;left:14px;border-right:0;border-bottom:0;border-top-left-radius:8px}
+.drop i:nth-of-type(2){top:14px;right:14px;border-left:0;border-bottom:0;border-top-right-radius:8px}
+.drop i:nth-of-type(3){bottom:14px;left:14px;border-right:0;border-top:0;border-bottom-left-radius:8px}
+.drop i:nth-of-type(4){bottom:14px;right:14px;border-left:0;border-top:0;border-bottom-right-radius:8px}
+.ic{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--gold);box-shadow:0 0 0 7px rgba(232,203,148,.09),0 0 28px rgba(232,203,148,.18);animation:pl 3.2s ease-in-out infinite}
+.ic svg{width:26px;height:26px;stroke:var(--gold);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@keyframes pl{50%{box-shadow:0 0 0 12px rgba(232,203,148,.05),0 0 36px rgba(232,203,148,.25)}}
+.drop b{font-family:"Bricolage Grotesque",Figtree,sans-serif;font-size:24px;font-weight:800;margin-top:6px}
+.drop span.t{color:var(--mute);font-size:14px}
+#res{display:none;border-radius:26px;overflow:hidden;background:var(--glass);border:1px solid var(--line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);animation:up .4s ease both}
+@keyframes up{from{opacity:0;transform:translateY(10px)}}
+.pic{padding:14px;background:rgba(0,0,0,.25);display:grid;place-items:center}
+#im{display:block;max-width:100%;max-height:300px;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.45)}
+#im:not([src]){display:none}
+.sec{padding:20px 20px;border-top:1px solid var(--line)}
+.pic+.sec{border-top:0}
+h2{font-family:"Bricolage Grotesque",Figtree,sans-serif;font-weight:500;font-size:15px;color:var(--mute);margin:0 0 14px}
+#cf:empty::before{content:"Model tasveer dekh raha hai...";color:var(--mute);font-size:14px}
+.row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"nm pc" "tr tr";align-items:baseline;gap:6px 12px;margin:0 0 14px}
+.nm{grid-area:nm;font-size:16px;text-transform:capitalize}
+.pc{grid-area:pc;color:var(--mute);font-size:14px;font-variant-numeric:tabular-nums}
+.tr{grid-area:tr;height:6px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden}
+.fl{height:100%;border-radius:6px;background:var(--vio)}
+.row:first-child .nm{font-family:"Bricolage Grotesque",Figtree,sans-serif;font-weight:800;font-size:34px;line-height:1.1;letter-spacing:-.02em;color:var(--gold)}
+.row:first-child .pc{font-size:20px;color:var(--ink);font-weight:600}
+.row:first-child .tr{height:8px}
+.row:first-child .fl{background:linear-gradient(90deg,var(--gold2),var(--gold))}
+#out{white-space:pre-wrap;font-size:16px;line-height:1.75;overflow-wrap:anywhere;color:#dfe4f1}
+#box{display:none}
+.act{display:flex;flex-direction:column;gap:12px}
+button{font:inherit;font-weight:600;padding:13px 18px;border-radius:14px;border:0;cursor:pointer;min-height:50px}
+button:focus-visible,#tx:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+#bt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+#bt:active{border-color:var(--gold)}
+#sv{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1405}
+#tx{font:inherit;width:100%;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:var(--ink)}
+#tx::placeholder{color:#6f7a94}
+.hint{color:var(--mute);font-size:13px;margin:0}
+footer{text-align:center;color:var(--mute);font-size:13px;margin-top:28px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head>
+<body><div class="wrap">
+<header>
+<div class="brand"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke-linecap="round"/></svg>Tasveer Pehchano</div>
+<h1>Dikhao.<br>Hum batayenge.</h1>
+<p class="sub">Tasveer chuno. Model foran pehchanta hai aur Gemini poori tafseel batata hai.</p>
+<p id="st">Page khul raha hai...</p></header>
+
 <script>
-window.onerror=function(m,s,l){window.dead=true;var e=document.getElementById("st");e.textContent="JS ghalti: "+m+" (line "+l+")";e.style.color="#f66"};
-window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e=document.getElementById("st");e.textContent="Wada toota: "+((ev.reason&&ev.reason.message)||ev.reason);e.style.color="#f66"});
+window.onerror=function(m,s,l){window.dead=true;var e=document.getElementById("st");e.textContent="JS ghalti: "+m+" (line "+l+")";e.style.color="#ff7b7f"};
+window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e=document.getElementById("st");e.textContent="Wada toota: "+((ev.reason&&ev.reason.message)||ev.reason);e.style.color="#ff7b7f"});
 </script>
-<input type="file" id="f" accept="image/*"><br><img id="im"><div id="out"></div><div id="cf" style="margin-top:10px;color:#9cf"></div>
-<div id="box">
-<button id="bt">Ghalat hai? Gemini se dobara poocho</button><br>
-<input id="tx" placeholder="Ya khud sahi jawab likho"><br>
+
+<main>
+<input type="file" id="f" accept="image/*">
+<label class="drop" for="f"><i></i><i></i><i></i><i></i><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><b>Tasveer chuno</b><span class="t">Gallery se chuno ya camera se kheencho</span></label>
+
+<section id="res" aria-live="polite">
+<div class="pic"><img id="im" alt="Chuni hui tasveer"></div>
+<div class="sec"><h2>Model ne pehchana</h2><div id="cf"></div></div>
+<div class="sec"><h2>Gemini ka jawab</h2><div id="out"></div></div>
+<div class="sec" id="box"><div class="act">
+<button id="bt">Ghalat hai? Gemini se dobara poocho</button>
+<input id="tx" placeholder="Ya khud sahi jawab likho" aria-label="Sahi jawab">
 <button id="sv">Ye yaad kar lo</button>
+<p class="hint">Jo tum yaad karwaoge, agli baar wahi jawab aayega.</p>
+</div></div>
+</section>
+</main>
+<footer>CIFAR-100 model aur Gemini se chalta hai</footer>
 </div>
+
 <script>
-st.textContent="v7: script chal gayi";
+st.textContent="Script chal gayi";
 const W="https://fancy-night-5d70.0naumanali98.workers.dev";
 const TH=0.97,Q=3000;
 const K="NoMi-12nAuMAn345";
@@ -22,7 +103,7 @@ const CN="apple aquarium_fish baby bear beaver bed bee beetle bicycle bottle bow
 let cif=null;
 let net=null,mem=[],err=false,note="",cur=null,curH=null;
 const t0=Date.now();
-const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="v7: model load ho raha hai... "+Math.round((Date.now()-t0)/1000)+" second. Tasveer abhi chun sakte hain, Gemini kaam karega."+note},1000);
+const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="Model load ho raha hai... "+Math.round((Date.now()-t0)/1000)+" second. Tasveer abhi chun sakte hain."+note},1000);
 function ld(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("file download nahi hui"));document.head.appendChild(s)})}
 async function init(){
 try{const r=await fetch(W);const tx2=await r.text();
@@ -35,19 +116,21 @@ await tf.setBackend("cpu");await tf.ready();
 net=await mobilenet.load();
 try{cif=await tf.loadGraphModel("cifar_model/model.json")}catch(e){note+=" (CIFAR model nahi mila)"}
 clearInterval(tick);
-st.textContent="Tayyar! Yaadasht mein "+mem.length+" tasveerein hain"+note;
+st.textContent="Tayyar. Yaadasht mein "+mem.length+" tasveerein hain."+note;
 }catch(e){err=true;clearInterval(tick);
 st.textContent="Model load nahi hua ("+e.message+"). Gemini phir bhi kaam karega."+note;}
 }
 init();
 function emb(img){return tf.tidy(()=>{const e=net.infer(img,true);const n=e.div(e.norm());return Array.from(n.dataSync()).map(v=>Math.round(v*Q))})}
 async function hsh(file){const b=await file.arrayBuffer();const d=await crypto.subtle.digest("SHA-256",b);return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,"0")).join("")}
-function cp(img){const h=img.naturalHeight,w=img.naturalWidth,s=Math.min(h,w),c=document.createElement("canvas");c.width=c.height=32;const g=c.getContext("2d");g.imageSmoothingQuality="high";g.drawImage(img,(w-s)/2,(h-s)/2,s,s,0,0,32,32);return tf.tidy(()=>{const p=cif.predict(tf.browser.fromPixels(c).toFloat().expandDims(0));return Array.from(p.dataSync())})}function cos(a,b){let d=0,x=0,y=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}return d/Math.sqrt(x*y+1e-9)}
+function cp(img){const h=img.naturalHeight,w=img.naturalWidth,s=Math.min(h,w),c=document.createElement("canvas");c.width=c.height=32;const g=c.getContext("2d");g.imageSmoothingQuality="high";g.drawImage(img,(w-s)/2,(h-s)/2,s,s,0,0,32,32);return tf.tidy(()=>{const p=cif.predict(tf.browser.fromPixels(c).toFloat().expandDims(0));return Array.from(p.dataSync())})}
+function cos(a,b){let d=0,x=0,y=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}return d/Math.sqrt(x*y+1e-9)}
+function cl(t){return String(t).replace(/\*\*/g,"").replace(/^\s*\* /gm,"• ")}
 async function save(e,t,h){
 try{const r=await fetch(W+"/save",{method:"POST",headers:{"Content-Type":"application/json","x-token":K},body:JSON.stringify({e:e,t:t,h:h})});const j=await r.json();return j.ok?"ho gaya":"nahi hua (server ne mana kiya)"}
 catch(x){return "nahi hua ("+x.message+")"}
 }
-f.onchange=async()=>{const file=f.files[0];if(!file)return;box.style.display="none";cur=null;out.textContent="Dekh raha hoon...";curH=await hsh(file);im.src=URL.createObjectURL(file)};im.onload=()=>run(false);
+f.onchange=async()=>{const file=f.files[0];if(!file)return;res.style.display="block";box.style.display="none";cur=null;cf.textContent="";out.textContent="Dekh raha hoon...";curH=await hsh(file);im.src=URL.createObjectURL(file)};im.onload=()=>run(false);
 bt.onclick=()=>run(true);
 sv.onclick=async()=>{
 const t=tx.value.trim();
@@ -61,11 +144,13 @@ tx.value="";
 };
 async function run(force){
 let e=null,best=0,ans=null,hit=null;
-cf.textContent="";if(cif){try{const q=cp(im).map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,3);cf.textContent="CIFAR-100: "+q.map(x=>CN[x[1]].replace(/_/g," ")+" "+Math.round(x[0]*100)+"%").join(", ")}catch(x){cf.textContent="CIFAR error: "+x.message}}
+cf.textContent="";
+if(cif){try{const q=cp(im).map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,3);
+cf.innerHTML=q.map(x=>{const p=Math.round(x[0]*100);return '<div class="row"><span class="nm">'+CN[x[1]].replace(/_/g," ")+'</span><div class="tr"><div class="fl" style="width:'+Math.max(p,2)+'%"></div></div><span class="pc">'+p+'%</span></div>'}).join("")}catch(x){cf.textContent="CIFAR error: "+x.message}}
 if(!force&&curH){for(const m of mem){if(m.h===curH)hit=m.t}}
 if(net){try{e=emb(im);cur=e;for(const m of mem){const sc=cos(e,m.e);if(sc>=best){best=sc;ans=m.t}}}catch(x){e=null}}
-if(hit){out.textContent=hit+"\n\n(Yaadasht se, bilkul wohi tasveer)";box.style.display="block";return}
-if(!force&&e&&ans&&best>=TH){out.textContent=ans+"\n\n(Yaadasht se, mushabihat "+Math.round(best*100)+"%)";box.style.display="block";return}
+if(hit){out.textContent=cl(hit)+"\n\n(Yaadasht se, bilkul wohi tasveer)";box.style.display="block";return}
+if(!force&&e&&ans&&best>=TH){out.textContent=cl(ans)+"\n\n(Yaadasht se, mushabihat "+Math.round(best*100)+"%)";box.style.display="block";return}
 out.textContent="Gemini se pooch raha hoon...";
 const s=Math.min(1,1024/Math.max(im.naturalWidth,im.naturalHeight));
 const c=document.createElement("canvas");
@@ -74,7 +159,7 @@ c.getContext("2d").drawImage(im,0,0,c.width,c.height);
 const data=c.toDataURL("image/jpeg",0.85).split(",")[1];
 try{
 const r=await fetch(W,{method:"POST",headers:{"Content-Type":"application/json","x-token":K},body:JSON.stringify({image:data,mime:"image/jpeg"})});const j=await r.json();
-const base=j.text+"\n\n(Gemini se)";
+const base=cl(j.text)+"\n\n(Gemini se)";
 out.textContent=base;
 if(!j.ok){out.textContent=base+"\n(Ye jawab yaad nahi kiya, Gemini masroof tha)"}
 else if(!e){out.textContent=base+"\n(Yaad nahi kiya: model load nahi hua)"}
