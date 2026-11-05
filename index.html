@@ -2,21 +2,25 @@
 <html lang="ur"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tasveer Pehchano</title>
 <style>body{font-family:sans-serif;background:#111;color:#eee;text-align:center;padding:16px;margin:0}img{max-width:100%;max-height:300px;border-radius:12px;margin:12px 0}#out{white-space:pre-wrap;text-align:left;max-width:600px;margin:auto;line-height:1.6}button{margin:12px;padding:10px 16px;border-radius:8px;border:0;background:#2a5;color:#fff;font-size:15px}</style></head>
 <body><h2>Tasveer Pehchano</h2>
-<p id="st">Tayyar ho raha hoon...</p>
-<input type="file" id="f" accept="image/*" disabled><br><img id="im"><div id="out"></div>
+<p id="st">Shuru ho raha hai...</p>
+<input type="file" id="f" accept="image/*"><br><img id="im"><div id="out"></div>
 <button id="bt" style="display:none">Ghalat hai? Gemini se dobara poocho</button>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1"></script>
 <script>
 const W="https://fancy-night-5d70.0naumanali98.workers.dev";
 const TH=0.92,Q=3000;
-let net,mem=[];
+let net=null,mem=[],err=false,note="";
+const t0=Date.now();
+const tick=setInterval(()=>{if(!net&&!err)st.textContent="Model load ho raha hai... "+Math.round((Date.now()-t0)/1000)+" second. Tasveer abhi bhi chun sakte hain."},1000);
 async function init(){
-net=await mobilenet.load();
 try{const r=await fetch(W);const tx=await r.text();
-mem=tx.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){return null}}).filter(Boolean);}catch(e){}
-st.textContent="Tayyar! Yaadasht mein "+mem.length+" tasveerein hain";
-f.disabled=false;
+mem=tx.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){return null}}).filter(Boolean);}
+catch(e){note=" (Yaadasht nahi mili: "+e.message+")"}
+try{net=await mobilenet.load();clearInterval(tick);
+st.textContent="Tayyar! Yaadasht mein "+mem.length+" tasveerein hain"+note;}
+catch(e){err=true;clearInterval(tick);
+st.textContent="Model load nahi hua ("+e.message+"). Gemini phir bhi kaam karega."+note;}
 }
 init();
 function emb(img){return tf.tidy(()=>{const e=net.infer(img,true);const n=e.div(e.norm());return Array.from(n.dataSync()).map(v=>Math.round(v*Q))})}
@@ -25,9 +29,21 @@ f.onchange=()=>{const file=f.files[0];if(!file)return;bt.style.display="none";ou
 im.onload=()=>run(false);
 bt.onclick=()=>run(true);
 async function run(force){
-const e=emb(im);
-let best=0,ans=null;
-for(const m of mem){const s=cos(e,m.e);if(s>best){best=s;ans=m.t}}
-if(!force&&ans&&best>=TH){out.textContent=ans+"\n\n(Yaadasht se, mushabihat "+Math.round(best*100)+"%)";bt.style.display="block";return}
+let e=null,best=0,ans=null;
+if(net){try{e=emb(im);for(const m of mem){const s=cos(e,m.e);if(s>best){best=s;ans=m.t}}}catch(x){e=null}}
+if(!force&&e&&ans&&best>=TH){out.textContent=ans+"\n\n(Yaadasht se, mushabihat "+Math.round(best*100)+"%)";bt.style.display="block";return}
 out.textContent="Gemini se pooch raha hoon...";
-const s=Math.min(1,1024/Math.max(im.naturalWi
+const s=Math.min(1,1024/Math.max(im.naturalWidth,im.naturalHeight));
+const c=document.createElement("canvas");
+c.width=im.naturalWidth*s;c.height=im.naturalHeight*s;
+c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+const data=c.toDataURL("image/jpeg",0.85).split(",")[1];
+try{
+const r=await fetch(W,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:data,mime:"image/jpeg"})});
+const j=await r.json();
+out.textContent=j.text+"\n\n(Gemini se)";
+if(j.ok&&e){mem.push({e:e,t:j.text});fetch(W+"/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({e:e,t:j.text})})}
+}catch(x){out.textContent="Masla: "+x.message}
+bt.style.display="block";
+}
+</script></body></html>
