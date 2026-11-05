@@ -34,6 +34,7 @@ await ld("https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1");
 await tf.setBackend("cpu");await tf.ready();
 net=await mobilenet.load();
 try{cif=await tf.loadGraphModel("cifar_model/model.json")}catch(e){note+=" (CIFAR model nahi mila)"}
+try{const a=cif.predict(tf.zeros([1,32,32,3])),b=cif.predict(tf.ones([1,32,32,3]));note+=" [T: "+tf.getBackend()+" "+a.argMax(1).dataSync()[0]+" "+b.argMax(1).dataSync()[0]+" "+a.max().dataSync()[0].toFixed(3)+" "+b.max().dataSync()[0].toFixed(3)+"]"}catch(e){note+=" [T err "+e.message+"]"}
 clearInterval(tick);
 st.textContent="Tayyar! Yaadasht mein "+mem.length+" tasveerein hain"+note;
 }catch(e){err=true;clearInterval(tick);
