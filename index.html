@@ -2,7 +2,11 @@
 <html lang="ur"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tasveer Pehchano</title>
 <style>body{font-family:sans-serif;background:#111;color:#eee;text-align:center;padding:16px;margin:0}img{max-width:100%;max-height:300px;border-radius:12px;margin:12px 0}#out{white-space:pre-wrap;text-align:left;max-width:600px;margin:auto;line-height:1.6}button{margin:8px;padding:10px 16px;border-radius:8px;border:0;background:#2a5;color:#fff;font-size:15px}#tx{width:85%;max-width:500px;padding:10px;border-radius:8px;border:1px solid #444;background:#222;color:#eee;font-size:15px}#box{display:none;margin-top:12px}</style></head>
 <body><h2>Tasveer Pehchano</h2>
-<p id="st">Page shuru ho gaya...</p>
+<p id="st">v6: page khula, script ka intezar...</p>
+<script>
+window.onerror=function(m,s,l){window.dead=true;var e=document.getElementById("st");e.textContent="JS ghalti: "+m+" (line "+l+")";e.style.color="#f66"};
+window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e=document.getElementById("st");e.textContent="Wada toota: "+((ev.reason&&ev.reason.message)||ev.reason);e.style.color="#f66"});
+</script>
 <input type="file" id="f" accept="image/*"><br><img id="im"><div id="out"></div>
 <div id="box">
 <button id="bt">Ghalat hai? Gemini se dobara poocho</button><br>
@@ -10,15 +14,16 @@
 <button id="sv">Ye yaad kar lo</button>
 </div>
 <script>
+st.textContent="v6: script chal gayi";
 const W="https://fancy-night-5d70.0naumanali98.workers.dev";
 const TH=0.92,Q=3000;
 let net=null,mem=[],err=false,note="",cur=null;
 const t0=Date.now();
-const tick=setInterval(()=>{if(!net&&!err)st.textContent="Model load ho raha hai... "+Math.round((Date.now()-t0)/1000)+" second. Tasveer abhi chun sakte hain, Gemini kaam karega."+note},1000);
+const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="v6: model load ho raha hai... "+Math.round((Date.now()-t0)/1000)+" second. Tasveer abhi chun sakte hain, Gemini kaam karega."+note},1000);
 function ld(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("file download nahi hui"));document.head.appendChild(s)})}
 async function init(){
-try{const r=await fetch(W);const tx=await r.text();
-mem=tx.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){return null}}).filter(Boolean);}
+try{const r=await fetch(W);const tx2=await r.text();
+mem=tx2.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){return null}}).filter(Boolean);}
 catch(e){note=" (Yaadasht nahi mili: "+e.message+")"}
 try{
 await ld("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0");
@@ -31,4 +36,35 @@ st.textContent="Model load nahi hua ("+e.message+"). Gemini phir bhi kaam karega
 }
 init();
 function emb(img){return tf.tidy(()=>{const e=net.infer(img,true);const n=e.div(e.norm());return Array.from(n.dataSync()).map(v=>Math.round(v*Q))})}
-function cos(a,b){let d=0,x=0,y=0;for(let i=0;i
+function cos(a,b){let d=0,x=0,y=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}return d/Math.sqrt(x*y+1e-9)}
+f.onchange=()=>{const file=f.files[0];if(!file)return;box.style.display="none";cur=null;out.textContent="Dekh raha hoon...";im.src=URL.createObjectURL(file)};
+im.onload=()=>run(false);
+bt.onclick=()=>run(true);
+sv.onclick=()=>{
+const t=tx.value.trim();
+if(!cur){out.textContent="Yaad karne ke liye model ka load hona zaroori hai. Thori der ruko aur tasveer dobara chuno.";return}
+if(!t)return;
+mem.push({e:cur,t:t});
+fetch(W+"/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({e:cur,t:t})});
+out.textContent=t+"\n\n(Tumhara sikhaya hua jawab save ho gaya)";
+tx.value="";
+};
+async function run(force){
+let e=null,best=0,ans=null;
+if(net){try{e=emb(im);cur=e;for(const m of mem){const sc=cos(e,m.e);if(sc>=best){best=sc;ans=m.t}}}catch(x){e=null}}
+if(!force&&e&&ans&&best>=TH){out.textContent=ans+"\n\n(Yaadasht se, mushabihat "+Math.round(best*100)+"%)";box.style.display="block";return}
+out.textContent="Gemini se pooch raha hoon...";
+const s=Math.min(1,1024/Math.max(im.naturalWidth,im.naturalHeight));
+const c=document.createElement("canvas");
+c.width=im.naturalWidth*s;c.height=im.naturalHeight*s;
+c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+const data=c.toDataURL("image/jpeg",0.85).split(",")[1];
+try{
+const r=await fetch(W,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:data,mime:"image/jpeg"})});
+const j=await r.json();
+out.textContent=j.text+"\n\n(Gemini se)";
+if(j.ok&&e){mem.push({e:e,t:j.text});fetch(W+"/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({e:e,t:j.text})})}
+}catch(x){out.textContent="Masla: "+x.message}
+box.style.display="block";
+}
+</script></body></html>
