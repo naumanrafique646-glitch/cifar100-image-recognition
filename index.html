@@ -7,7 +7,7 @@
 window.onerror=function(m,s,l){window.dead=true;var e=document.getElementById("st");e.textContent="JS ghalti: "+m+" (line "+l+")";e.style.color="#f66"};
 window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e=document.getElementById("st");e.textContent="Wada toota: "+((ev.reason&&ev.reason.message)||ev.reason);e.style.color="#f66"});
 </script>
-<input type="file" id="f" accept="image/*"><br><img id="im"><div id="out"></div>
+<input type="file" id="f" accept="image/*"><br><img id="im"><div id="out"></div><div id="cf" style="margin-top:10px;color:#9cf"></div>
 <div id="box">
 <button id="bt">Ghalat hai? Gemini se dobara poocho</button><br>
 <input id="tx" placeholder="Ya khud sahi jawab likho"><br>
@@ -18,6 +18,8 @@ st.textContent="v7: script chal gayi";
 const W="https://fancy-night-5d70.0naumanali98.workers.dev";
 const TH=0.97,Q=3000;
 const K="NoMi-12nAuMAn345";
+const CN="apple aquarium_fish baby bear beaver bed bee beetle bicycle bottle bowl boy bridge bus butterfly camel can castle caterpillar cattle chair chimpanzee clock cloud cockroach couch crab crocodile cup dinosaur dolphin elephant flatfish forest fox girl hamster house kangaroo keyboard lamp lawn_mower leopard lion lizard lobster man maple_tree motorcycle mountain mouse mushroom oak_tree orange orchid otter palm_tree pear pickup_truck pine_tree plain plate poppy porcupine possum rabbit raccoon ray road rocket rose sea seal shark shrew skunk skyscraper snail snake spider squirrel streetcar sunflower sweet_pepper table tank telephone television tiger tractor train trout tulip turtle wardrobe whale willow_tree wolf woman worm".split(" ");
+let cif=null;
 let net=null,mem=[],err=false,note="",cur=null,curH=null;
 const t0=Date.now();
 const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="v7: model load ho raha hai... "+Math.round((Date.now()-t0)/1000)+" second. Tasveer abhi chun sakte hain, Gemini kaam karega."+note},1000);
@@ -30,6 +32,7 @@ try{
 await ld("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0");
 await ld("https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1");
 net=await mobilenet.load();
+try{cif=await tf.loadGraphModel("cifar_model/model.json")}catch(e){note+=" (CIFAR model nahi mila)"}
 clearInterval(tick);
 st.textContent="Tayyar! Yaadasht mein "+mem.length+" tasveerein hain"+note;
 }catch(e){err=true;clearInterval(tick);
@@ -38,6 +41,7 @@ st.textContent="Model load nahi hua ("+e.message+"). Gemini phir bhi kaam karega
 init();
 function emb(img){return tf.tidy(()=>{const e=net.infer(img,true);const n=e.div(e.norm());return Array.from(n.dataSync()).map(v=>Math.round(v*Q))})}
 async function hsh(file){const b=await file.arrayBuffer();const d=await crypto.subtle.digest("SHA-256",b);return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,"0")).join("")}
+function cp(img){const h=img.naturalHeight,w=img.naturalWidth,s=Math.min(h,w),c=document.createElement("canvas");c.width=c.height=32;const g=c.getContext("2d");g.imageSmoothingQuality="high";g.drawImage(img,(w-s)/2,(h-s)/2,s,s,0,0,32,32);return tf.tidy(()=>{const p=cif.predict(tf.browser.fromPixels(c).toFloat().div(255).expandDims(0));return Array.from(p.dataSync())})}
 function cos(a,b){let d=0,x=0,y=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}return d/Math.sqrt(x*y+1e-9)}
 async function save(e,t,h){
 try{const r=await fetch(W+"/save",{method:"POST",headers:{"Content-Type":"application/json","x-token":K},body:JSON.stringify({e:e,t:t,h:h})});const j=await r.json();return j.ok?"ho gaya":"nahi hua (server ne mana kiya)"}
@@ -57,6 +61,7 @@ tx.value="";
 };
 async function run(force){
 let e=null,best=0,ans=null,hit=null;
+cf.textContent="";if(cif){try{const q=cp(im).map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,3);cf.textContent="CIFAR-100: "+q.map(x=>CN[x[1]].replace(/_/g," ")+" "+Math.round(x[0]*100)+"%").join(", ")}catch(x){cf.textContent="CIFAR error: "+x.message}}
 if(!force&&curH){for(const m of mem){if(m.h===curH)hit=m.t}}
 if(net){try{e=emb(im);cur=e;for(const m of mem){const sc=cos(e,m.e);if(sc>=best){best=sc;ans=m.t}}}catch(x){e=null}}
 if(hit){out.textContent=hit+"\n\n(Yaadasht se, bilkul wohi tasveer)";box.style.display="block";return}
