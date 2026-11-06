@@ -78,8 +78,9 @@ h2{font-family:var(--hd);font-weight:500;font-size:15px;color:var(--mute);margin
 .act{display:flex;flex-direction:column;gap:12px}
 button{font:inherit;font-weight:600;padding:13px 18px;border-radius:14px;border:0;cursor:pointer;min-height:50px}
 button:focus-visible,#tx:focus-visible,.btn:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
-#bt{background:transparent;color:var(--ink);border:1px solid var(--line)}
-#bt:active{border-color:var(--gold)}
+#bt,#dl,.btn2{background:transparent;color:var(--ink);border:1px solid var(--line)}
+#bt:active,#dl:active,.btn2:active{border-color:var(--gold)}
+.btn2{border-radius:14px;padding:11px 18px;min-height:46px;font-weight:600}
 #sv{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1405}
 #tx{font:inherit;width:100%;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:var(--ink)}
 #tx::placeholder{color:#6f7a94}
@@ -131,7 +132,7 @@ footer .wrap{flex-direction:row;justify-content:space-between;align-items:center
 <div>
 <h1>Show it.<br>We'll tell you.</h1>
 <p class="sub">Pick any photo. Our on-device model recognizes 1,000+ kinds of objects instantly, and Gemini adds a detailed description.</p>
-<div class="cta"><a class="btn" href="#tryit">Try it now</a></div>
+<div class="cta"><a class="btn" href="#tryit">Try it now</a><button class="btn2" id="inst" type="button">Install app</button></div>
 <p id="st">Loading page...</p>
 </div>
 <div class="art" aria-hidden="true"><svg viewBox="0 0 320 320" fill="none" stroke="#e8cb94"><circle cx="160" cy="160" r="130" stroke-opacity=".25"/><circle cx="160" cy="160" r="96" stroke-opacity=".5"/><circle cx="160" cy="160" r="52" stroke-width="2"/><circle cx="160" cy="160" r="12" fill="#e8cb94" stroke="none"/><path d="M40 90V40h50M230 40h50v50M280 230v50h-50M90 280H40v-50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -157,6 +158,7 @@ window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e
 <button id="bt">Not right? Ask Gemini again</button>
 <input id="tx" placeholder="Or type the correct answer" aria-label="Correct answer">
 <button id="sv">Save this answer</button>
+<button id="dl" type="button">Download result as image</button>
 <p class="hint">Whatever you save becomes the answer next time for a similar photo.</p>
 </div></div>
 </section>
@@ -187,6 +189,7 @@ window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e
 <details><summary>What if the answer is wrong?</summary><p>Press "Not right? Ask Gemini again" and Gemini will look again. Or type the correct answer and press "Save this answer". Next time a similar photo shows the answer you saved.</p></details>
 <details><summary>Why is the first load slow?</summary><p>The models download the first time. On a slow connection this can take a while. You can still choose a photo meanwhile, and Gemini's answer works even before the model is ready.</p></details>
 <details><summary>What can't it recognize?</summary><p>The models know 1,000 kinds of things. For anything outside that list, they give their closest guess, and then Gemini's description is more reliable. The page warns you when the model is not confident.</p></details>
+<details id="fi"><summary>How do I install it as an app?</summary><p>Android (Chrome): tap the menu (three dots), then "Install app" or "Add to Home screen". iPhone (Safari): tap Share, then "Add to Home Screen". It then opens full-screen like a normal app. Installing is not available in incognito mode.</p></details>
 </div></section>
 </main>
 
@@ -287,4 +290,27 @@ out.textContent=base+"\n(Saved to memory: "+st2+")";
 }catch(x){out.textContent="Problem: "+x.message+(x.message=="Failed to fetch"?"\n(Could not reach Gemini. Check your connection or try again shortly.)":"")}
 box.style.display="block";
 }
+
+let dp=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dp=e});
+window.addEventListener("appinstalled",()=>{dp=null;inst.hidden=true});
+inst.onclick=async()=>{if(dp){dp.prompt();try{await dp.userChoice}catch(e){}dp=null;return}const d=document.getElementById("fi");d.open=true;d.scrollIntoView({behavior:"smooth",block:"center"})};
+function wrapT(g,t,mw){const L=[];t.split("\n").forEach(par=>{if(!par.trim()){L.push("");return}let line="";par.split(" ").forEach(w=>{const test=line?line+" "+w:w;if(g.measureText(test).width>mw&&line){L.push(line);line=w}else line=test});L.push(line)});return L}
+dl.onclick=()=>{
+const Wd=1080,P=60,IW=Wd-2*P,nw=im.naturalWidth,nh=im.naturalHeight;if(!nw)return;
+const sc=Math.min(IW/nw,720/nh),pw=nw*sc,ph=nh*sc,F="Figtree,system-ui,sans-serif",HF="'Bricolage Grotesque',Figtree,system-ui,sans-serif";
+const big=lastC&&lastC[0]>=CT;let lab="",pc=0;
+if(big){lab=CN[lastC[1]].replace(/_/g," ");pc=lastC[0]}else if(lastP&&lastP[0]){lab=lastP[0].className.split(",")[0];pc=lastP[0].probability}
+lab=lab.charAt(0).toUpperCase()+lab.slice(1);
+const desc=out.textContent.split("\n").filter(l=>!/^\(.*\)$/.test(l.trim())).join("\n").trim();
+const c=document.createElement("canvas");c.width=Wd;let g=c.getContext("2d");g.font="30px "+F;
+const L=wrapT(g,desc,IW),H=P+90+ph+40+(lab?110:0)+L.length*44+50+P;
+c.height=H;g=c.getContext("2d");g.fillStyle="#0a0f1f";g.fillRect(0,0,Wd,H);g.textBaseline="top";
+let y=P;g.fillStyle="#e8cb94";g.font="800 40px "+HF;g.fillText("Seeyra",P,y);y+=90;
+const x0=P+(IW-pw)/2;g.save();g.beginPath();if(g.roundRect)g.roundRect(x0,y,pw,ph,24);else g.rect(x0,y,pw,ph);g.clip();g.drawImage(im,x0,y,pw,ph);g.restore();y+=ph+40;
+if(lab){g.fillStyle="#e8cb94";g.font="800 64px "+HF;g.fillText(lab,P,y);g.fillStyle="#9aa4bd";g.font="30px "+F;g.textAlign="right";g.fillText(Math.round(pc*100)+"%",Wd-P,y+22);g.textAlign="left";y+=110}
+g.fillStyle="#dfe4f1";g.font="30px "+F;L.forEach(l=>{g.fillText(l,P,y);y+=44});
+g.fillStyle="#9aa4bd";g.font="24px "+F;g.fillText("Made with Seeyra",P,y+20);
+c.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="seeyra-result.png";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)},"image/png")
+};
 </script></body></html>
