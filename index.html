@@ -246,7 +246,7 @@ const s=await save(cur,t,curH);
 out.textContent=t+"\n\n(Your answer, saved to memory: "+s+")";
 tx.value="";
 };
-let lastP=null,lastC=null;const CT=0.7;
+let lastP=null,lastC=null;const CT=0.9;
 function rw(n,p,top){const q=Math.round(p*100);return '<div class="row'+(top?' top':'')+'"><span class="nm">'+n+'</span><div class="tr"><div class="fl" style="width:'+Math.max(q,2)+'%"></div></div><span class="pc">'+q+'%</span></div>'}
 function cifCalc(){lastC=null;if(cif){try{lastC=cp(im).map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0])[0]}catch(x){}}}
 function draw(){
