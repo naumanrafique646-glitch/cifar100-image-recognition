@@ -111,13 +111,15 @@ footer .wrap{display:flex;flex-direction:column;gap:14px}
 @media(min-width:900px){
 .hero{grid-template-columns:1.2fr .8fr}
 .art{display:block}
+.steps{grid-template-columns:repeat(3,1fr)}
+footer .wrap{flex-direction:row;justify-content:space-between;align-items:center}
+}
+@media(min-width:900px) and (hover:hover) and (pointer:fine){
 .tool{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);align-items:start}
 .drop{grid-column:1;grid-row:1;position:sticky;top:84px;padding:72px 24px}
 #res,#empty{grid-column:2;grid-row:1/span 2}
 #empty{display:grid;place-items:center;text-align:center;min-height:320px;padding:32px;border-radius:26px;border:1px dashed var(--line);color:var(--mute)}
 #res[style*="block"]+#empty{display:none}
-.steps{grid-template-columns:repeat(3,1fr)}
-footer .wrap{flex-direction:row;justify-content:space-between;align-items:center}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style></head>
