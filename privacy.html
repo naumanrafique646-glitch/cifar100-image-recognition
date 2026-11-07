@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Privacy Policy | Seeyra</title>
+<meta name="description" content="How Seeyra handles your photos, saved answers and technical data.">
+<meta name="theme-color" content="#0a0f1f"><meta name="color-scheme" content="dark">
+<link rel="icon" type="image/png" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0f1f;--glass:rgba(255,255,255,.055);--line:rgba(255,255,255,.13);--ink:#eef1f8;--mute:#9aa4bd;--gold:#e8cb94;--gold2:#b98e4a;--hd:"Bricolage Grotesque",Figtree,system-ui,sans-serif}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;color-scheme:dark}
+body{margin:0;color:var(--ink);font-family:Figtree,system-ui,sans-serif;line-height:1.7;min-height:100vh;background:radial-gradient(900px 520px at 92% -8%,rgba(139,124,246,.28),transparent 60%),radial-gradient(700px 460px at -10% 4%,rgba(232,203,148,.12),transparent 60%),var(--bg);background-attachment:fixed}
+a{color:var(--gold)}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+.nav{padding-top:env(safe-area-inset-top,0px);border-bottom:1px solid var(--line);background:rgba(10,15,31,.72)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--hd);font-weight:800;font-size:20px;letter-spacing:-.02em;color:var(--ink)}
+.brand img{width:32px;height:32px;border-radius:8px}
+.back{font-size:14px;text-decoration:none;color:var(--mute)}
+.back:hover{color:var(--ink)}
+main{padding:clamp(28px,6vw,56px) 0 40px}
+h1{font-family:var(--hd);font-weight:800;font-size:clamp(34px,8vw,52px);line-height:1.05;letter-spacing:-.03em;margin:0 0 8px}
+.upd{color:var(--mute);font-size:14px;margin:0 0 28px}
+.card{background:var(--glass);border:1px solid var(--line);border-radius:22px;padding:6px 22px 10px;margin-bottom:18px}
+h2{font-family:var(--hd);font-weight:800;font-size:21px;margin:22px 0 6px;color:var(--gold)}
+p,li{color:#d6dcea;font-size:16px}
+p{margin:0 0 12px}
+ul{margin:0 0 12px;padding-left:22px}
+li{margin-bottom:6px}
+.note{color:var(--mute);font-size:14px}
+footer{border-top:1px solid var(--line);padding:24px 0 calc(32px + env(safe-area-inset-bottom,0px));color:var(--mute);font-size:14px}
+a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+</style></head>
+<body>
+<header class="nav"><div class="wrap"><a class="brand" href="./"><img src="icon-192.png" alt="" width="32" height="32">Seeyra</a><a class="back" href="./">Back to the app</a></div></header>
+<main><div class="wrap">
+<h1>Privacy Policy</h1>
+<p class="upd">Last updated: 7 November 2026</p>
+
+<div class="card">
+<h2>In short</h2>
+<p>Seeyra recognizes what is in a photo you choose. We do not use accounts, cookies, ads or analytics. Your photo is not stored by Seeyra. A short answer about it, plus a numeric fingerprint of the photo, can be saved in a shared memory (explained below).</p>
+
+<h2>1. Your photos</h2>
+<ul>
+<li>The recognition models (MobileNet and CIFAR-100) run inside your browser. For this step the photo stays on your device.</li>
+<li>If the photo is not already in the shared memory, a resized copy (up to 1024 pixels, JPEG) is sent through our server (a Cloudflare Worker) to Google's Gemini service to get a written description. Seeyra does not store that image.</li>
+<li>Google processes the image under its own terms. Depending on the plan and settings used by the app owner, Google may keep or use it as described in the <a href="https://ai.google.dev/gemini-api/terms" rel="noopener">Gemini API terms</a>.</li>
+<li>Please do not upload photos you do not want a third party to process, such as ID documents, private documents, or photos of other people without their consent.</li>
+</ul>
+
+<h2>2. The shared memory</h2>
+<p>When Gemini describes a photo, or when you press "Save this answer", Seeyra saves one entry:</p>
+<ul>
+<li>the answer text (Gemini's description, or the text you typed);</li>
+<li>a numeric fingerprint of the photo (a list of numbers produced by the model);</li>
+<li>a one-way hash of the photo file (a code that cannot be turned back into the photo).</li>
+</ul>
+<p>The photo itself is not saved. The memory is shared by everyone who uses the app and is downloaded by the app so it can recognize repeat photos, so anyone using the app can see the saved answer texts. Do not type personal information into "Save this answer". Entries are kept until the app owner deletes them.</p>
+
+<h2>3. Technical data</h2>
+<ul>
+<li>To prevent abuse, our server counts requests per IP address per day. This counter is kept for about 25 hours and then removed.</li>
+<li>The services that host and deliver the app (listed below) may log your IP address and device details as part of normal operation, under their own policies.</li>
+</ul>
+
+<h2>4. Third-party services</h2>
+<ul>
+<li><strong>GitHub Pages</strong>: hosts the website.</li>
+<li><strong>Cloudflare</strong>: runs the server that talks to Gemini and stores the shared memory.</li>
+<li><strong>Google Gemini</strong>: writes the photo descriptions.</li>
+<li><strong>Google Fonts and Google model hosting</strong>: deliver the fonts and the MobileNet model files.</li>
+<li><strong>jsDelivr</strong>: delivers the TensorFlow.js and MobileNet code libraries.</li>
+</ul>
+
+<h2>5. Cookies and storage on your device</h2>
+<p>Seeyra does not set cookies. If you install the app or open the site, your browser may keep copies of the app's files (including through a service worker) so the page opens faster and can show the last loaded page when you are offline. You can remove them by clearing the site data in your browser.</p>
+
+<h2>6. Your choices</h2>
+<ul>
+<li>You can use the app without saving anything by not pressing "Save this answer". Descriptions from Gemini are saved automatically for new photos, so avoid sensitive photos.</li>
+<li>To ask for a saved entry to be removed, contact us using the details below. Please describe the photo or quote the answer text, because entries are not linked to a person.</li>
+</ul>
+
+<h2>7. Children</h2>
+<p>Seeyra is not aimed at children under 13, and we do not knowingly collect personal information from them.</p>
+
+<h2>8. Changes</h2>
+<p>If we change how Seeyra works, we will update this page and the date at the top.</p>
+
+<h2>9. Contact</h2>
+<p>Questions or removal requests: <a href="mailto:REPLACE_WITH_YOUR_EMAIL">REPLACE_WITH_YOUR_EMAIL</a></p>
+<p class="note">This policy describes how the app works today. It is a plain-language summary, not legal advice.</p>
+</div>
+</div></main>
+<footer><div class="wrap">Seeyra. <a href="./">Back to the app</a></div></footer>
+</body></html>

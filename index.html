@@ -86,6 +86,7 @@ button:focus-visible,#tx:focus-visible,.btn:focus-visible,summary:focus-visible,
 #tx::placeholder{color:#6f7a94}
 .hint{color:var(--mute);font-size:13px;margin:0}
 .gh{font-family:var(--hd);font-weight:800;font-size:24px;line-height:1.25;color:var(--gold);margin:0 0 6px;overflow-wrap:anywhere}
+details p a{color:var(--gold)}
 #c1{margin-top:6px}#c1:empty{display:none}
 /* how */
 .steps{display:grid;gap:16px;padding:0;margin:0;list-style:none;counter-reset:s}
@@ -188,7 +189,7 @@ window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e
 <section id="faq" class="sp"><div class="wrap">
 <h2 class="big">Common questions</h2>
 <p class="lead">What people ask most.</p>
-<details><summary>Where does my photo go?</summary><p>The recognition model runs in your browser. If a photo is not already remembered, it is sent to Gemini (Google) to get a description. Memory stores only the answer text and a numeric fingerprint of the photo, never the photo itself.</p></details>
+<details><summary>Where does my photo go?</summary><p>The recognition model runs in your browser. If a photo is not already remembered, it is sent to Gemini (Google) to get a description. Memory stores only the answer text and a numeric fingerprint of the photo, never the photo itself. <a href="privacy.html">Read the privacy policy</a>.</p></details>
 <details><summary>What if the answer is wrong?</summary><p>Press "Not right? Ask Gemini again" and Gemini will look again. Or type the correct answer and press "Save this answer". Next time a similar photo shows the answer you saved.</p></details>
 <details><summary>Why is the first load slow?</summary><p>The models download the first time. On a slow connection this can take a while. You can still choose a photo meanwhile, and Gemini's answer works even before the model is ready.</p></details>
 <details><summary>What can't it recognize?</summary><p>The models know 1,000 kinds of things. For anything outside that list, they give their closest guess, and then Gemini's description is more reliable. The page warns you when the model is not confident.</p></details>
@@ -198,7 +199,7 @@ window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e
 
 <footer><div class="wrap">
 <span>Seeyra. Powered by MobileNet (1,000 classes), CIFAR-100 and Gemini.</span>
-<nav class="fl2" aria-label="Footer"><a href="#tryit">Try it</a><a href="#how">How it works</a><a href="#faq">FAQ</a><a href="#top">Back to top</a></nav>
+<nav class="fl2" aria-label="Footer"><a href="#tryit">Try it</a><a href="#how">How it works</a><a href="#faq">FAQ</a><a href="privacy.html">Privacy</a><a href="#top">Back to top</a></nav>
 </div></footer>
 <noscript><p style="text-align:center;padding:16px">This page needs JavaScript to work.</p></noscript>
 
@@ -255,7 +256,7 @@ function rw(n,p,top){const q=Math.round(p*100);return '<div class="row'+(top?' t
 function cifCalc(){lastC=null;if(cif){try{lastC=cp(im).map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0])[0]}catch(x){}}}
 let gemText="",gemWait=false,cifErr="",runId=0;const UT=0.4;
 function esc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
-function gs(t){const l=cl(t).split("\n").map(x=>x.replace(/^\u2022\s*/,"").trim()).filter(Boolean)[0]||"";const m=l.match(/^.*?[.!?](?=\s|$)/);let r=m?m[0]:l;if(r.length>110)r=r.slice(0,107).replace(/\s+\S*$/,"")+"\u2026";return r}
+function gs(t){const ls=cl(t).split("\n").map(x=>x.replace(/^\u2022\s*/,"").trim()).filter(Boolean);const l=ls[0]||"";if(ls.length>1&&l.split(/\s+/).length<=6&&!/[.!?:]$/.test(l))return l;const m=l.match(/^.*?[.!?](?=\s|$)/);let r=m?m[0]:l;if(r.length>110)r=r.slice(0,107).replace(/\s+\S*$/,"")+"\u2026";return r}
 function draw(){
 if(!lastP&&!lastC)return;
 const big=lastC&&lastC[0]>=CT;

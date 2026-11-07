@@ -1,6 +1,6 @@
 const ALLOWED_ORIGIN = "https://naumanrafique646-glitch.github.io";
 const DAILY_LIMIT = 60; // per-IP daily limit (saves + Gemini combined)
-const PROMPT = "What is in this image? Answer in simple English: the object's name, its color, and 2-3 key details. Keep the answer short.";
+const PROMPT = "Look at this image and reply in plain English using exactly this format, with no markdown and no asterisks.\nLine 1: the main object's name only, 1 to 4 words, no full stop (for example: Silver sports car).\nLine 2: leave blank.\nThen one line starting with 'Color:' and two or three short lines starting with '\u2022 ' that give key details.";
 const MIMES = ["image/jpeg", "image/png", "image/webp"];
 
 const H = {
