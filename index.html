@@ -211,6 +211,7 @@ let net=null,mem=[],err=false,note="",cur=null,curH=null;
 const t0=Date.now();
 const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="Loading model... "+Math.round((Date.now()-t0)/1000)+"s. You can already choose a photo."+note},1000);
 function ld(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.async=false;s.src=src;s.onload=ok;s.onerror=()=>no(new Error("file download failed"));document.head.appendChild(s)})}
+function loadCif(n){cifState=1;tf.loadGraphModel("cifar_model/model.json").then(m=>{cif=m;cifState=2;if(im.getAttribute("src")&&im.complete&&im.naturalWidth){cifCalc();draw()}}).catch(e=>{if(n<2){setTimeout(()=>loadCif(n+1),4000)}else{cifState=3;cifErr=e&&e.message?e.message:"";if(im.getAttribute("src")&&lastP)draw()}})}
 async function init(){
 try{const r=await fetch(W);const tx2=await r.text();
 mem=tx2.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){return null}}).filter(Boolean);}
@@ -221,7 +222,7 @@ await tf.setBackend("cpu");await tf.ready();
 net=await mobilenet.load();
 clearInterval(tick);
 st.textContent="Ready. "+mem.length+" photos in memory."+note;
-cifState=1;tf.loadGraphModel("cifar_model/model.json").then(m=>{cif=m;cifState=2;if(im.getAttribute("src")&&im.complete&&im.naturalWidth){cifCalc();draw()}}).catch(()=>{cifState=3;if(c1.textContent.indexOf("loading")>-1)c1.textContent=""});
+loadCif(0);
 }catch(e){err=true;clearInterval(tick);
 st.textContent="Model failed to load ("+e.message+"). Gemini will still work."+note;}
 }
@@ -250,46 +251,48 @@ tx.value="";
 let lastP=null,lastC=null;const CT=0.9;
 function rw(n,p,top){const q=Math.round(p*100);return '<div class="row'+(top?' top':'')+'"><span class="nm">'+n+'</span><div class="tr"><div class="fl" style="width:'+Math.max(q,2)+'%"></div></div><span class="pc">'+q+'%</span></div>'}
 function cifCalc(){lastC=null;if(cif){try{lastC=cp(im).map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0])[0]}catch(x){}}}
-let gemText="";const UT=0.4;
+let gemText="",gemWait=false,cifErr="",runId=0;const UT=0.4;
 function esc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 function gs(t){const l=cl(t).split("\n").map(x=>x.replace(/^\u2022\s*/,"").trim()).filter(Boolean)[0]||"";const m=l.match(/^.*?[.!?](?=\s|$)/);let r=m?m[0]:l;if(r.length>110)r=r.slice(0,107).replace(/\s+\S*$/,"")+"\u2026";return r}
 function draw(){
 if(!lastP&&!lastC)return;
 const big=lastC&&lastC[0]>=CT;
 const unsure=!big&&lastP&&lastP[0]&&lastP[0].probability<UT;
-let h="";c1.textContent="";
-if(big){h+=rw(CN[lastC[1]].replace(/_/g," "),lastC[0],true)+'<p class="hint" style="margin:-6px 0 4px">CIFAR-100 model&#39;s answer</p>'}
-else if(unsure){
-if(gemText)h+='<p class="gh">'+esc(gs(gemText))+'</p><p class="hint" style="margin:0 0 4px">Gemini&#39;s answer (the model is not confident)</p>';
-else h+='<p class="gh">Not sure</p><p class="hint" style="margin:0 0 4px">Low confidence. See Gemini&#39;s description below.</p>'}
+const hd=(t,c)=>'<p class="gh">'+t+'</p><p class="hint" style="margin:0 0 4px">'+c+'</p>';
+let h="",top=false,cifHead=false;c1.textContent="";
+if(gemText)h+=hd(esc(gs(gemText)),"Gemini&#39;s answer");
+else if(gemWait)h+=hd("Checking with Gemini...","The model&#39;s guesses are below.");
+else if(big){cifHead=true;h+=rw(CN[lastC[1]].replace(/_/g," "),lastC[0],true)+'<p class="hint" style="margin:-6px 0 4px">CIFAR-100 model&#39;s answer</p>'}
+else if(unsure)h+=hd("Not sure","Low confidence. See Gemini&#39;s description below.");
+else top=true;
 if(lastP){
-if(big)h+='<p class="hint" style="margin:16px 0 10px">Second model (1,000 classes):</p>';
-else if(unsure)h+='<p class="hint" style="margin:16px 0 10px">Model&#39;s guesses:</p>';
-h+=lastP.map((x,i)=>rw(x.className.split(",")[0],x.probability,!big&&!unsure&&i==0)).join("")}
+if(cifHead)h+='<p class="hint" style="margin:16px 0 10px">Second model (1,000 classes):</p>';
+else if(!top)h+='<p class="hint" style="margin:16px 0 10px">Model&#39;s guesses:</p>';
+h+=lastP.map((x,i)=>rw(x.className.split(",")[0],x.probability,top&&i==0)).join("")}
 cf.innerHTML=h;
-if(!big){if(lastC)c1.textContent="CIFAR-100 says: "+CN[lastC[1]].replace(/_/g," ")+" "+Math.round(lastC[0]*100)+"%";else if(cifState==1)c1.textContent="CIFAR-100 model is loading in the background..."}
+if(!cifHead){if(lastC)c1.textContent="CIFAR-100 says: "+CN[lastC[1]].replace(/_/g," ")+" "+Math.round(lastC[0]*100)+"%";else if(cifState==1)c1.textContent="CIFAR-100 model is loading in the background...";else if(cifState==3)c1.textContent="CIFAR-100 model could not load"+(cifErr?" ("+cifErr+")":"")+"."}
 }
 async function fr(u,o){try{return await fetch(u,o)}catch(e){await new Promise(r=>setTimeout(r,1500));return await fetch(u,o)}}
 async function run(force){
 let e=null,best=0,ans=null,hit=null;
-cf.textContent="";c1.textContent="";lastP=null;lastC=null;gemText="";
+cf.textContent="";c1.textContent="";lastP=null;lastC=null;gemText="";gemWait=false;const my=++runId;
 if(net){try{lastP=await net.classify(im,3)}catch(x){cf.textContent="Model error: "+x.message}}else{cf.textContent="Model not loaded."}
 cifCalc();draw();
 if(!force&&curH){for(const m of mem){if(m.h===curH)hit=m.t}}
 if(net){try{e=emb(im);cur=e;for(const m of mem){const sc=cos(e,m.e);if(sc>=best){best=sc;ans=m.t}}}catch(x){e=null}}
 if(hit){gemText=hit;draw();out.textContent=cl(hit)+"\n\n(From memory: exact same photo)";box.style.display="block";return}
 if(!force&&e&&ans&&best>=TH){gemText=ans;draw();out.textContent=cl(ans)+"\n\n(From memory: "+Math.round(best*100)+"% similar)";box.style.display="block";return}
-out.textContent="Asking Gemini...";
+out.textContent="Asking Gemini...";gemWait=true;draw();
 const s=Math.min(1,1024/Math.max(im.naturalWidth,im.naturalHeight));
 const c=document.createElement("canvas");
 c.width=im.naturalWidth*s;c.height=im.naturalHeight*s;
 c.getContext("2d").drawImage(im,0,0,c.width,c.height);
 const data=c.toDataURL("image/jpeg",0.85).split(",")[1];
 try{
-const r=await fr(W,{method:"POST",headers:{"Content-Type":"application/json","x-token":K},body:JSON.stringify({image:data,mime:"image/jpeg"})});const j=await r.json();
+const r=await fr(W,{method:"POST",headers:{"Content-Type":"application/json","x-token":K},body:JSON.stringify({image:data,mime:"image/jpeg"})});const j=await r.json();if(my!==runId)return;
 const base=cl(j.text)+"\n\n(From Gemini)";
 out.textContent=base;
-if(j.ok){gemText=j.text;draw()}
+gemWait=false;if(j.ok)gemText=j.text;draw();
 if(!j.ok){out.textContent=base+"\n(Not saved: Gemini was busy)"}
 else if(!e){out.textContent=base+"\n(Not saved: model not loaded)"}
 else{
@@ -298,7 +301,7 @@ out.textContent=base+"\n(Saving...)";
 const st2=await save(e,j.text,curH);
 out.textContent=base+"\n(Saved to memory: "+st2+")";
 }
-}catch(x){out.textContent="Problem: "+x.message+(x.message=="Failed to fetch"?"\n(Could not reach Gemini. Check your connection or try again shortly.)":"")}
+}catch(x){if(my!==runId)return;gemWait=false;draw();out.textContent="Problem: "+x.message+(x.message=="Failed to fetch"?"\n(Could not reach Gemini. Check your connection or try again shortly.)":"")}
 box.style.display="block";
 }
 
@@ -311,7 +314,7 @@ dl.onclick=()=>{
 const Wd=1080,P=60,IW=Wd-2*P,nw=im.naturalWidth,nh=im.naturalHeight;if(!nw)return;
 const sc=Math.min(IW/nw,720/nh),pw=nw*sc,ph=nh*sc,F="Figtree,system-ui,sans-serif",HF="'Bricolage Grotesque',Figtree,system-ui,sans-serif";
 const big=lastC&&lastC[0]>=CT;let lab="",pc=0;
-if(big){lab=CN[lastC[1]].replace(/_/g," ");pc=lastC[0]}else if(lastP&&lastP[0]&&lastP[0].probability>=UT){lab=lastP[0].className.split(",")[0];pc=lastP[0].probability}
+if(gemText){lab=""}else if(big){lab=CN[lastC[1]].replace(/_/g," ");pc=lastC[0]}else if(lastP&&lastP[0]&&lastP[0].probability>=UT){lab=lastP[0].className.split(",")[0];pc=lastP[0].probability}
 lab=lab.charAt(0).toUpperCase()+lab.slice(1);
 const desc=out.textContent.split("\n").filter(l=>!/^\(.*\)$/.test(l.trim())).join("\n").trim();
 const c=document.createElement("canvas");c.width=Wd;let g=c.getContext("2d");g.font="30px "+F;
