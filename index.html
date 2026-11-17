@@ -144,7 +144,9 @@ footer .wrap{flex-direction:row;justify-content:space-between;align-items:center
 </div>
 
 <script>
-window.onerror=function(m,s,l){window.dead=true;var e=document.getElementById("st");e.textContent="JS ghalti: "+m+" (line "+l+")";e.style.color="#ff7b7f"};
+window.onerror=function(m,s,l){
+if(/WebViewJavascriptBridge|^Script error/i.test(String(m)))return true;
+window.dead=true;var e=document.getElementById("st");e.textContent="JS ghalti: "+m+" (line "+l+")";e.style.color="#ff7b7f"};
 window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e=document.getElementById("st");e.textContent="Wada toota: "+((ev.reason&&ev.reason.message)||ev.reason);e.style.color="#ff7b7f"});
 </script>
 
