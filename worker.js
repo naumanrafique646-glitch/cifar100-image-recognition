@@ -52,18 +52,33 @@ async function handle(request, env) {
       return json({ text: "Daily limit reached. Please try again tomorrow.", ok: false }, 429);
 
     try {
-      if (path === "/save") {
-        const { e, t, h: hh } = await request.json();
-        if (
-          !Array.isArray(e) || e.length > 2048 || !e.every((v) => typeof v === "number") ||
-          typeof t !== "string" || t.length > 3000
-        ) return json({ ok: false }, 400);
-        const old = (await env.MEMORY.get("db")) || "";
-        if (old.length > 1500000) return json({ ok: false });
-        const line = JSON.stringify({ e: e, h: String(hh || "").slice(0, 100), t: t });
-        await env.MEMORY.put("db", old + line + "\n");
-        return json({ ok: true });
-      }
+if (path === "/save") {
+  const { e, t, h: hh } = await request.json();
+  if (
+    !Array.isArray(e) || e.length > 2048 || !e.every((v) => typeof v === "number") ||
+    typeof t !== "string" || t.length > 3000
+  ) return json({ ok: false }, 400);
+
+  const hs = String(hh || "").slice(0, 100);
+  let lines = ((await env.MEMORY.get("db")) || "").split("\n").filter(Boolean);
+
+  // same photo ka purana jawab hata do
+  if (hs) {
+    lines = lines.filter((l) => {
+      try { return JSON.parse(l).h !== hs; } catch (x) { return false; }
+    });
+  }
+
+  lines.push(JSON.stringify({ e: e, h: hs, t: t }));
+
+  // limit se zyada ho to sab se purani lines delete
+  let size = lines.reduce((a, l) => a + l.length + 1, 0);
+  while (size > 1400000 && lines.length > 1) size -= lines.shift().length + 1;
+
+  await env.MEMORY.put("db", lines.join("\n") + "\n");
+  return json({ ok: true });
+}
+      
 
       const { image, mime } = await request.json();
       if (typeof image !== "string" || image.length > 3000000)
