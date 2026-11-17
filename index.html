@@ -218,6 +218,12 @@ const t0=Date.now();
 const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="Loading model... "+Math.round((Date.now()-t0)/1000)+"s ["+stg+" | "+memS+"]. You can already choose a photo."+note},1000);
 function ld(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.async=false;s.src=src;s.onload=ok;s.onerror=()=>no(new Error("file download failed"));document.head.appendChild(s)})}
 function loadCif(n){cifState=1;tf.loadGraphModel("cifar_model/model.json").then(m=>{cif=m;cifState=2;if(im.getAttribute("src")&&im.complete&&im.naturalWidth){cifCalc();draw()}}).catch(e=>{if(n<2){setTimeout(()=>loadCif(n+1),4000)}else{cifState=3;cifErr=e&&e.message?e.message:"";if(im.getAttribute("src")&&lastP)draw()}})}
+async function loadNet(){
+/* try the copy saved on this phone first (fast), else download once and save it */
+try{const m=await mobilenet.load({version:1,alpha:1.0,modelUrl:"indexeddb://seeyra-mnet"});if(m&&m.model){return m}}catch(e){}
+const m=await mobilenet.load();
+try{if(m&&m.model&&m.model.save)m.model.save("indexeddb://seeyra-mnet").catch(()=>{})}catch(e){}
+return m}
 async function init(){
 const memP=(async()=>{try{const r=await fetch(W);const tx2=await r.text();
 mem=tx2.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){return null}}).filter(Boolean);memS="memory ok "+Math.round((Date.now()-t0)/1000)+"s, "+Math.round(tx2.length/1024)+"KB"}
@@ -225,7 +231,7 @@ catch(e){memS="memory failed";note=" (Memory unavailable: "+e.message+")"}})();
 try{
 const p1=ld("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0"),p2=ld("https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1");await p1;stg="tfjs ok "+Math.round((Date.now()-t0)/1000)+"s";await p2;stg="mobilenet lib ok "+Math.round((Date.now()-t0)/1000)+"s";
 await tf.setBackend("cpu");await tf.ready();stg="backend ok "+Math.round((Date.now()-t0)/1000)+"s";
-net=await mobilenet.load();
+stg="model download "+Math.round((Date.now()-t0)/1000)+"s";net=await loadNet();
 await memP;
 clearInterval(tick);
 st.textContent="Ready. "+mem.length+" photos in memory."+note;
