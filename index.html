@@ -77,6 +77,7 @@ h2{font-family:var(--hd);font-weight:500;font-size:15px;color:var(--mute);margin
 #box{display:none}
 .act{display:flex;flex-direction:column;gap:12px}
 button{font:inherit;font-weight:600;padding:13px 18px;border-radius:14px;border:0;cursor:pointer;min-height:50px}
+button:disabled{opacity:.5;cursor:wait}
 button:focus-visible,#tx:focus-visible,.btn:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 #bt,#dl,.btn2{background:transparent;color:var(--ink);border:1px solid var(--line)}
 #bt:active,#dl:active,.btn2:active{border-color:var(--gold)}
@@ -223,7 +224,8 @@ mem=tx2.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){re
 catch(e){note=" (Memory unavailable: "+e.message+")"}
 try{
 const p1=ld("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0"),p2=ld("https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1");await p1;await p2;
-await tf.setBackend("cpu");await tf.ready();
+try{if(!(await tf.setBackend("webgl")))await tf.setBackend("cpu")}catch(e){await tf.setBackend("cpu")}
+await tf.ready();
 net=await mobilenet.load();
 clearInterval(tick);
 st.textContent="Ready. "+mem.length+" photos in memory."+note;
@@ -280,14 +282,28 @@ if(!cifHead){if(lastC)c1.textContent="CIFAR-100 says: "+CN[lastC[1]].replace(/_/
 async function fr(u,o){try{return await fetch(u,o)}catch(e){await new Promise(r=>setTimeout(r,1500));return await fetch(u,o)}}
 async function run(force){
 let e=null,best=0,ans=null,hit=null;
-cf.textContent="";c1.textContent="";lastP=null;lastC=null;gemText="";gemWait=false;const my=++runId;
-if(net){try{lastP=await net.classify(im,3)}catch(x){cf.textContent="Model error: "+x.message}}else{cf.textContent="Model not loaded."}
-cifCalc();draw();
+const my=++runId;
+bt.disabled=true;
+const fin=()=>{bt.disabled=false;box.style.display="block"};
+if(force&&lastP&&cur){
+  /* "Ask again": model results already exist, so skip re-running them */
+  gemText="";gemWait=true;e=cur;
+  out.textContent="Asking Gemini...";draw();
+  await new Promise(r=>setTimeout(r,50));
+}else{
+  cf.textContent="";c1.textContent="";lastP=null;lastC=null;gemText="";gemWait=false;
+  out.textContent="Looking...";
+  await new Promise(r=>setTimeout(r,50));
+  if(net){try{lastP=await net.classify(im,3)}catch(x){cf.textContent="Model error: "+x.message}}else{cf.textContent="Model not loaded."}
+  cifCalc();draw();
+}
 if(!force&&curH){for(const m of mem){if(m.h===curH)hit=m.t}}
-if(net){try{e=emb(im);cur=e;for(const m of mem){const sc=cos(e,m.e);if(sc>=best){best=sc;ans=m.t}}}catch(x){e=null}}
-if(hit){gemText=hit;draw();out.textContent=cl(hit)+"\n\n(From memory: exact same photo)";box.style.display="block";return}
-if(!force&&e&&ans&&best>=TH){gemText=ans;draw();out.textContent=cl(ans)+"\n\n(From memory: "+Math.round(best*100)+"% similar)";box.style.display="block";return}
+if(net&&!e){try{e=emb(im);cur=e}catch(x){e=null}}
+if(e&&!force){for(const m of mem){const sc=cos(e,m.e);if(sc>=best){best=sc;ans=m.t}}}
+if(hit){gemText=hit;draw();out.textContent=cl(hit)+"\n\n(From memory: exact same photo)";fin();return}
+if(!force&&e&&ans&&best>=TH){gemText=ans;draw();out.textContent=cl(ans)+"\n\n(From memory: "+Math.round(best*100)+"% similar)";fin();return}
 out.textContent="Asking Gemini...";gemWait=true;draw();
+await new Promise(r=>setTimeout(r,30));
 const s=Math.min(1,1024/Math.max(im.naturalWidth,im.naturalHeight));
 const c=document.createElement("canvas");
 c.width=im.naturalWidth*s;c.height=im.naturalHeight*s;
@@ -307,7 +323,7 @@ const st2=await save(e,j.text,curH);
 out.textContent=base+"\n(Saved to memory: "+st2+")";
 }
 }catch(x){if(my!==runId)return;gemWait=false;draw();out.textContent="Problem: "+x.message+(x.message=="Failed to fetch"?"\n(Could not reach Gemini. Check your connection or try again shortly.)":"")}
-box.style.display="block";
+fin();
 }
 
 let dp=null;
