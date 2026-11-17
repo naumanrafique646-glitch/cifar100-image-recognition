@@ -215,7 +215,7 @@ const CN="apple aquarium_fish baby bear beaver bed bee beetle bicycle bottle bow
 let cif=null,cifState=0;
 let stg="start",memS="memory...";let net=null,mem=[],err=false,note="",cur=null,curH=null;
 const t0=Date.now();
-const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="Loading model... "+Math.round((Date.now()-t0)/1000)+"s ["+stg+" | "+memS+"]. You can already choose a photo."+note},1000);
+const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="Loading model... "+Math.round((Date.now()-t0)/1000)+"s. You can already choose a photo."+note},1000);
 function ld(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.async=false;s.src=src;s.onload=ok;s.onerror=()=>no(new Error("file download failed"));document.head.appendChild(s)})}
 function loadCif(n){cifState=1;tf.loadGraphModel("cifar_model/model.json").then(m=>{cif=m;cifState=2;if(im.getAttribute("src")&&im.complete&&im.naturalWidth){cifCalc();draw()}}).catch(e=>{if(n<2){setTimeout(()=>loadCif(n+1),4000)}else{cifState=3;cifErr=e&&e.message?e.message:"";if(im.getAttribute("src")&&lastP)draw()}})}
 async function loadNet(){
