@@ -210,7 +210,7 @@ window.addEventListener("unhandledrejection",function(ev){window.dead=true;var e
 st.textContent="Script running";
 const W="https://fancy-night-5d70.0naumanali98.workers.dev";
 const TH=0.97,Q=3000;
-const K="Na1Um2aNciFe3r100C0dEhAi7yEh";
+const K="oVbgEEkBtoiMz2al1RDZNPvU";
 const CN="apple aquarium_fish baby bear beaver bed bee beetle bicycle bottle bowl boy bridge bus butterfly camel can castle caterpillar cattle chair chimpanzee clock cloud cockroach couch crab crocodile cup dinosaur dolphin elephant flatfish forest fox girl hamster house kangaroo keyboard lamp lawn_mower leopard lion lizard lobster man maple_tree motorcycle mountain mouse mushroom oak_tree orange orchid otter palm_tree pear pickup_truck pine_tree plain plate poppy porcupine possum rabbit raccoon ray road rocket rose sea seal shark shrew skunk skyscraper snail snake spider squirrel streetcar sunflower sweet_pepper table tank telephone television tiger tractor train trout tulip turtle wardrobe whale willow_tree wolf woman worm".split(" ");
 let cif=null,cifState=0;
 let net=null,mem=[],err=false,note="",cur=null,curH=null;
@@ -219,14 +219,14 @@ const tick=setInterval(()=>{if(!net&&!err&&!window.dead)st.textContent="Loading 
 function ld(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.async=false;s.src=src;s.onload=ok;s.onerror=()=>no(new Error("file download failed"));document.head.appendChild(s)})}
 function loadCif(n){cifState=1;tf.loadGraphModel("cifar_model/model.json").then(m=>{cif=m;cifState=2;if(im.getAttribute("src")&&im.complete&&im.naturalWidth){cifCalc();draw()}}).catch(e=>{if(n<2){setTimeout(()=>loadCif(n+1),4000)}else{cifState=3;cifErr=e&&e.message?e.message:"";if(im.getAttribute("src")&&lastP)draw()}})}
 async function init(){
-try{const r=await fetch(W);const tx2=await r.text();
-mem=tx2.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){return null}}).filter(Boolean);}
-catch(e){note=" (Memory unavailable: "+e.message+")"}
+const memP=(async()=>{try{const r=await fetch(W);const tx2=await r.text();
+mem=tx2.split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch(e){return null}}).filter(Boolean)}
+catch(e){note=" (Memory unavailable: "+e.message+")"}})();
 try{
 const p1=ld("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0"),p2=ld("https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1");await p1;await p2;
-try{if(!(await tf.setBackend("webgl")))await tf.setBackend("cpu")}catch(e){await tf.setBackend("cpu")}
-await tf.ready();
+await tf.setBackend("cpu");await tf.ready();
 net=await mobilenet.load();
+await memP;
 clearInterval(tick);
 st.textContent="Ready. "+mem.length+" photos in memory."+note;
 loadCif(0);
